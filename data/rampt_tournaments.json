@@ -1,5 +1,15 @@
 {
- "_note": "RAMP InterActive tournament sites (<sub>.tournamentsgurus.com). Key: words that must all appear in the header competition (lower case); value: the site's subdomain. 'EAK Tournament' = Eastern Alliance Kickoff (Worcester/Marlborough MA, early September, U12-U18 AAA).",
+ "_note": "RAMP InterActive tournament sites. Key: words that must all appear in the header competition (lower case). Value: the subdomain of a <sub>.tournamentsgurus.com site, or {\"base\": the address, \"tz\": the time zone} for a tournament on its own address. 'EAK Tournament' = Eastern Alliance Kickoff (Worcester/Marlborough MA, early September, U12-U18 AAA). 'Rockies Tournament' = Hockey in the Rockies, Cochrane Minor Hockey (Alberta, mid November, U11-U18 AA).",
  "eak": "eakickoff",
- "eastern alliance kickoff": "eakickoff"
+ "eastern alliance kickoff": "eakickoff",
+ "rockies tournament": {
+  "base": "https://hockeyintherockiestournaments.com",
+  "tz": "America/Edmonton",
+  "name": "Hockey in the Rockies"
+ },
+ "hockey in the rockies": {
+  "base": "https://hockeyintherockiestournaments.com",
+  "tz": "America/Edmonton",
+  "name": "Hockey in the Rockies"
+ }
 }
