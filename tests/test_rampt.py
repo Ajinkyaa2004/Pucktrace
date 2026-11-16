@@ -67,6 +67,9 @@ parsed = lookup.parse_header(HEADER)
 a = R.RampTournament()
 check("the reader takes the 'Rockies Tournament' header", a.applies(parsed, None, {}))
 check("and leaves other competitions alone", not a.applies(lookup.parse_header("[1] A 0 - 0 B | USA Hockey 16U | 2026-11-14T04:45:00"), None, {}))
+hc = lambda date: lookup.parse_header(f"[2287783] Bow Valley Timberwolves U18 AA 0 - 0 Foothills Bisons U18 AA | Hockey Canada 18U | {date}T04:00:00 | RL:8")   # noqa: E731
+check("a tournament game filed under 'Hockey Canada 18U' is looked up there during the tournament", a.applies(hc("2026-11-14"), None, {}))
+check("but not a Hockey Canada game on another weekend", not a.applies(hc("2026-11-21"), None, {}) and not a.applies(hc("2026-10-10"), None, {}))
 out = asyncio.run(a.find(parsed, None, {}))
 urls = [c["url"] for c in out]
 check("only the U16 division's schedule is opened", [u for u in asked if "masterschedule" in u] == ["https://hockeyintherockiestournaments.com/division/2096/35659/masterschedule"], str(asked))

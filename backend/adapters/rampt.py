@@ -105,12 +105,22 @@ class RampTournament(Adapter):
 
     def _site(self, parsed):
         c = parsed["comp"].lower()
-        for words, value in load().items():
+        sites = load()
+        for words, value in sites.items():
             if all(re.search(r"\b" + re.escape(w) + r"\b", c) for w in words.split()):
                 try:
                     return site_of(value)
                 except Exception:
                     return None
+        # a tournament game filed under a general competition ('Hockey Canada 18U'): the entry's
+        # "also" names those competitions, and only games inside its "dates" are looked up there
+        for value in sites.values():
+            if isinstance(value, dict) and value.get("also") and len(value.get("dates") or []) == 2:
+                if value["dates"][0] <= (parsed.get("date") or "") <= value["dates"][1] and any(a in c for a in value["also"]):
+                    try:
+                        return site_of(value)
+                    except Exception:
+                        return None
         return None
 
     def applies(self, parsed, tm, kb):

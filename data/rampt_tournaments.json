@@ -1,15 +1,31 @@
 {
- "_note": "RAMP InterActive tournament sites. Key: words that must all appear in the header competition (lower case). Value: the subdomain of a <sub>.tournamentsgurus.com site, or {\"base\": the address, \"tz\": the time zone} for a tournament on its own address. 'EAK Tournament' = Eastern Alliance Kickoff (Worcester/Marlborough MA, early September, U12-U18 AAA). 'Rockies Tournament' = Hockey in the Rockies, Cochrane Minor Hockey (Alberta, mid November, U11-U18 AA).",
+ "_note": "RAMP InterActive tournament sites. Key: words that must all appear in the header competition (lower case). Value: the subdomain of a <sub>.tournamentsgurus.com site, or {\"base\": the address, \"tz\": the time zone} for a tournament on its own address. 'EAK Tournament' = Eastern Alliance Kickoff (Worcester/Marlborough MA, early September, U12-U18 AAA). 'Rockies Tournament' = Hockey in the Rockies, Cochrane Minor Hockey (Alberta, mid November, U11-U18 AA). An entry may add \"also\": general competitions its games are sometimes filed under, used only for games inside \"dates\": [first day, last day].",
  "eak": "eakickoff",
  "eastern alliance kickoff": "eakickoff",
  "rockies tournament": {
   "base": "https://hockeyintherockiestournaments.com",
   "tz": "America/Edmonton",
-  "name": "Hockey in the Rockies"
+  "name": "Hockey in the Rockies",
+  "dates": [
+   "2026-11-12",
+   "2026-11-16"
+  ],
+  "also": [
+   "hockey canada",
+   "canada hockey"
+  ]
  },
  "hockey in the rockies": {
   "base": "https://hockeyintherockiestournaments.com",
   "tz": "America/Edmonton",
-  "name": "Hockey in the Rockies"
+  "name": "Hockey in the Rockies",
+  "dates": [
+   "2026-11-12",
+   "2026-11-16"
+  ],
+  "also": [
+   "hockey canada",
+   "canada hockey"
+  ]
  }
 }
