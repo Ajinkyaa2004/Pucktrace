@@ -1,5 +1,8 @@
 {
  "_note": "short or site name -> the full names it stands for. Used when comparing a header team with a site's team. Add pairs here as you meet them.",
+ "_never": [
+  ["MD2 Calvin University", "Midland University"]
+ ],
  "HPK": [
   "Hameenlinnan Pallokerho"
  ],

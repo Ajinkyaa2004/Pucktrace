@@ -70,14 +70,22 @@ def aliases() -> dict:
         team_similarity.cache_clear()
     if _ALIASES is None:
         _ALIASES = {}
+        never = set()
         for f in (_ALIAS_FILE, _ALIAS_FILE.with_name("aliases_learned.json")):   # hand-made, then learned from saves
             try:
-                for k, v in _json.loads(f.read_text()).items():
+                data = _json.loads(f.read_text())
+                # '_never': spellings found wrong (two different teams). Listed in aliases.json (kept in
+                # git) they also undo a spelling already learned: "Midland University" was learned as
+                # "MD2 Calvin University" and gave a Calvin game for a Midland header.
+                never |= {frozenset((tokens(a)[0], tokens(b)[0])) for a, b in data.get("_never", []) if a and b}
+                for k, v in data.items():
                     if k.startswith("_"):
                         continue
                     kb = tokens(k)[0]
                     for full in v:
                         fb = tokens(full)[0]
+                        if frozenset((kb, fb)) in never:
+                            continue
                         _ALIASES.setdefault(kb, set()).add(fb)
                         _ALIASES.setdefault(fb, set()).add(kb)
             except Exception:
@@ -103,7 +111,10 @@ WORD_SYN = {"pens": "Penguins", "hb": "Honeybaked", "honeybaked": "HB", "nyc": "
 
 
 # levels and school tags written in capitals, never initials of words
-NOT_ACRONYMS = {"aa", "aaa", "jv", "hs", "ii", "iii", "iv", "ot", "so"}
+NOT_ACRONYMS = {"aa", "aaa", "jv", "hs", "ii", "iii", "iv", "ot", "so",
+                # league tags written into team names ("Oklahoma State Univ. ACHA 2"), never a club's initials
+                "acha", "ncaa", "nahl", "ushl", "ncdc", "echl", "ahl", "nhl", "ohl", "whl", "bchl", "ajhl", "sjhl",
+                "mjhl", "ojhl", "khl", "vhl", "mhl", "shl", "iihf"}
 # names a schedule uses before the teams are known
 PLACEHOLDERS = re.compile(r"^(?:away|home|tbd|tba|tbc|bye|unknown|team\s?\d*|(?:winner|loser|w|l)\s+(?:of\s+)?(?:game|g|#)?\s*\d+.*|\d+(?:st|nd|rd|th)\s+.*)$", re.I)
 

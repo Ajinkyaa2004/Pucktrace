@@ -46,12 +46,13 @@ from .teamlinkt import TeamLinkt
 from .mmjhl import Mmjhl
 from .blocked import Blocked
 from .winnipegaa import WinnipegAA
+from .fwssc import FWSSC
 
 INDEX = Index()
 _CZ = CeskyHokej()
 ADAPTERS = [SweHockey(), HockeyTech(), GameSheetLive(), HockeyNo(), Sihf(), Leijonat(), CeskyHokej(), Deb(), Liiga(), Nhl(), Del2(), SportsAdmin(), Ligasy(),
             TimeToScore(), Khl(), HockeyBy(), Chl(), EsportsCz(), HockeyData(), PennyDel(), UkHockey(), HockeyFrance(), Onlajny(),
-            ItaliaHockey(), Lhf(), RampTournament(), HockeySlovakia(), Ramp(), Regystra(), Kreezee(), Ayhl(), DigitalShift(), NCAA(), Nwahl(), Echl(), TeamLinkt(), Mmjhl(), WinnipegAA(), Blocked()]
+            ItaliaHockey(), Lhf(), RampTournament(), HockeySlovakia(), Ramp(), Regystra(), Kreezee(), Ayhl(), DigitalShift(), NCAA(), Nwahl(), Echl(), TeamLinkt(), Mmjhl(), WinnipegAA(), FWSSC(), Blocked()]
 BUDGET_S = 30
 WEB = WebSearch()
 WEB_SEARCH = True     # last resort when no source knows the game; the replay turns it off
@@ -219,6 +220,9 @@ def _exact_enough(parsed: dict, c: dict) -> bool:
     return c.get("date") == want and not (a is not None and getattr(a, "ambiguous_dates", False))
 
 
+PLAYED_GUARD = True       # off only in the replay that measures it
+
+
 def decide(parsed: dict, cands: list) -> dict:
     """Score-ranked candidates -> Found (one strong game) / Check / None."""
     # the same game from the index and from its live source: keep the live one, since the
@@ -283,7 +287,26 @@ def decide(parsed: dict, cands: list) -> dict:
         def _played(c):
             return bool(c.get("score")) or str(c.get("status") or "").lower() in ("final", "completed", "final/so", "final/ot")
         played = [c for c in strong_ones if _played(c)]
-        if len(played) == 1 and len(played) < len(strong_ones):
+        # ...unless the header's time points at one of the others: the pair's other game of a
+        # weekend series, not played yet when the game list was last read (USPHL NCDC, Fri and Sat:
+        # Saturday's header got Friday's game because only Friday's had a score)
+        # (a source's times can be a time zone off: USPHL lists western games in Eastern time, so
+        # this only asks that another game is clearly closer to the header than the played one;
+        # the start-time rule below then picks, or the analyst does)
+        hu0 = header_utc(parsed)
+        def _away_h(c):
+            try:
+                import datetime as _dt
+                return abs((_dt.datetime.fromisoformat(c["start_utc"]) - hu0).total_seconds()) / 3600
+            except Exception:
+                return None
+        def _is(c, test):
+            h = _away_h(c)
+            return h is not None and test(h)
+        hp = _away_h(played[0]) if (hu0 and played) else None
+        unplayed_at_time = bool(hp is not None and hp > 1.5
+                                and any(_is(c, lambda h: h < hp - 1) for c in strong_ones if c is not played[0]))
+        if len(played) == 1 and len(played) < len(strong_ones) and not (unplayed_at_time and PLAYED_GUARD):
             strong_ones = played
     # Back-to-back games of the same pair: the header's time (Moscow time) decides when the
     # sources give start times; keep the one game starting within 100 minutes of it.

@@ -338,6 +338,24 @@ CHECK_ROSTERS = True   # the report replay turns this off; rosters have their ow
 USE_MEMORY = True      # remembered results; the replay turns this off so every game is searched for real
 
 
+def _saved_other_teams(p, url) -> bool:
+    """True when a saved report is a game in the game list whose teams are clearly not the header's
+    (Midland University - Oklahoma State saved with a Calvin - Aquinas report, 31 Oct). A link the
+    game list does not hold is trusted as before."""
+    try:
+        from . import gameindex
+        from .adapters.base import team_similarity
+        g = next((g for g in gameindex.games_on(gameindex.around(p["date"])) if g.get("url") == url), None)
+        if not g:
+            return False
+        sim = lambda a, b: team_similarity(a, b or "")[0]
+        both = max(min(sim(p["t1"], g["home"]), sim(p["t2"], g["away"])),
+                   min(sim(p["t1"], g["away"]), sim(p["t2"], g["home"])))
+        return both < 0.5
+    except Exception:
+        return False
+
+
 async def search_full(header, kb, rosters=True):
     """Manual source list plus the automatic adapters."""
     r = search(header, kb)
@@ -352,6 +370,8 @@ async def search_full(header, kb, rosters=True):
     except Exception:
         pass
     from . import hokejcz
+    if mem and mem["confirmed"] and _saved_other_teams(p, mem["url"]):
+        mem = None        # the saved report is another game (a wrong save): search again
     if mem and mem["confirmed"]:
         # you saved this game's report before: answer at once
         from .adapters.kreezee import fix_link
