@@ -93,6 +93,7 @@ STATES = {"ct": "connecticut", "nj": "new jersey", "ny": "new york", "nyc": "new
           "az": "arizona", "co": "colorado", "tx": "texas", "fl": "florida", "wi": "wisconsin", "mo": "missouri", "ks": "kansas",
           "ga": "georgia", "nc": "north carolina", "sc": "south carolina", "tn": "tennessee", "in": "indiana", "ia": "iowa",
           "nd": "north dakota", "sd": "south dakota", "ne": "nebraska", "ut": "utah", "nv": "nevada", "ak": "alaska", "ct": "connecticut"}
+ONE_LETTER_CAP = 0.7                      # a code matched on one letter alone: below what "Found" needs
 GENERIC_INITIALS = set("HACSMYFIEL")      # Hockey, Association, Club, Society, Minor, Youth, Federation, Inc, Elite, League
 
 
@@ -114,7 +115,7 @@ def _rest_shared(short: str, code: str, fw: list) -> bool:
     return bool(rest & {x.lower() for x in fw if len(x) >= 3})
 
 
-def expand_acronyms(short: str, full: str) -> str:
+def expand_acronyms(short: str, full: str, strict: bool = False) -> str:
     """'PTL Black 14U' against 'Princeton Tiger Lilies Black 14U' -> 'Princeton Tiger Lilies Black 14U':
     an upper-case word of 2-4 letters (dots allowed) becomes the run of words in the other name
     whose initials spell it; known state/city codes are expanded too."""
@@ -135,8 +136,12 @@ def expand_acronyms(short: str, full: str) -> str:
                 for k in range(n - 1, 0, -1):
                     if not set(bare[k:]) <= GENERIC_INITIALS:
                         continue
-                    if k == 1 and n < 3 and not _rest_shared(short, w, fw):
-                        continue          # "HS Regis Raiders" is not "Hawkeye"; "AC Avalanche" is "Airdrie Avalanche"
+                    if k == 1 and (n < 3 or strict) and not _rest_shared(short, w, fw) and not (
+                            n >= 3 and re.search(rf"\b{re.escape(bare[k:])}\b", full or "", re.I)):     # "BHC" = "Boulder HC"
+                        # "HS Regis Raiders" is not "Hawkeye"; "AC Avalanche" is "Airdrie Avalanche".
+                        # strict: a three- or four-letter code read from ONE letter ("KHA" = K + Hockey
+                        # Association, so any word starting with K) also needs another shared word
+                        continue
                     for i in range(len(fw) - k + 1):
                         if "".join(x[0] for x in fw[i:i + k]).upper() == bare[:k] and all(len(x) > 2 for x in fw[i:i + k]):
                             rep = " ".join(fw[i:i + k])
@@ -192,7 +197,18 @@ def _team_similarity_all(header_name: str, site_name: str, context: str = "") ->
         if (h2, s2_) != (header_name, site_name):
             sc, rc = _team_similarity(h2, s2_, context)
             if sc > best[0]:
-                best = (sc, rc + " (abbreviation spelled out)")
+                # read from one letter only, with no other word in common ("KHA" as "Hokejski Klub
+                # Siscia", "EAC Women Capitals" as "Esbjerg IK"): a guess, never enough for "Found"
+                if (h2, s2_) != (header_name if h2 == header_name else expand_acronyms(header_name, site_name, True),
+                                 site_name if s2_ == site_name else expand_acronyms(site_name, header_name, True)):
+                    sc2, rc2 = _team_similarity(header_name if h2 == header_name else expand_acronyms(header_name, site_name, True),
+                                                site_name if s2_ == site_name else expand_acronyms(site_name, header_name, True), context)
+                    if sc2 >= sc:
+                        sc, rc = sc2, rc2
+                    else:
+                        sc, rc = max(sc2, min(sc, ONE_LETTER_CAP)), rc + "; abbreviation guessed from one letter"
+                if sc > best[0]:
+                    best = (sc, rc + " (abbreviation spelled out)")
     sb = tokens(site_name)[0]
     hb = tokens(header_name)[0]
     for alt in aliases().get(sb, ()):
@@ -384,6 +400,9 @@ def score_candidate(cand: dict, parsed: dict, context: str = "") -> dict:
     (x1, q1, p1), (x2, q2, p2) = _hdr_team(parsed, "t1", cand["away"], ctx), _hdr_team(parsed, "t2", cand["home"], ctx)
     if x1 + x2 > s1 + s2:
         (s1, r1, o1), (s2, r2, o2), swapped = (x1, q1, p1), (x2, q2, p2), True
+    if "guessed from one letter" in r1 and "guessed from one letter" in r2:
+        # both teams rest on a one-letter guess: nothing ties this game to the header
+        s1, s2 = min(s1, 0.4), min(s2, 0.4)
     reasons.append(f"team 1: {s1:.0%} ({r1})")
     reasons.append(f"team 2: {s2:.0%} ({r2})")
     if swapped:
