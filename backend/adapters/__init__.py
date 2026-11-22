@@ -221,6 +221,7 @@ def _exact_enough(parsed: dict, c: dict) -> bool:
 
 
 PLAYED_GUARD = True       # off only in the replay that measures it
+JV_GUARD = True
 
 
 def decide(parsed: dict, cands: list) -> dict:
@@ -242,6 +243,16 @@ def decide(parsed: dict, cands: list) -> dict:
             unique.append(c)
     cands = unique
     strong_ones = [c for c in cands if strong(c) and c.get("kind", "protocol") == "protocol"]   # a results page is never a Found
+    # a header that names a JV team is a JV game: when the site lists the pair's JV game and its
+    # varsity game, the varsity one is another game (2297012, Providence - Carmel JV, 21 Nov)
+    _jv = re.compile(r"\bJ\.?V\.?\b|junior varsity", re.I)
+    if JV_GUARD and _jv.search(f"{parsed.get('t1', '')} {parsed.get('t2', '')}"):
+        is_jv = lambda c: bool(_jv.search(f"{c.get('home', '')} {c.get('away', '')}"))
+        jv_near = [c for c in cands if is_jv(c) and c["confidence"] >= 0.75 and min(c["team_scores"]) >= 0.7]
+        if jv_near and any(not is_jv(c) for c in strong_ones):
+            # the JV game is a real option: a varsity game is never "Found" over it (if the JV game
+            # is not strong enough itself, the answer is Pick one with both listed)
+            strong_ones = [c for c in strong_ones if is_jv(c)]
     # a team plays one game at a time: when a strong candidate starts at the header's time, strong
     # copies of the pair on another date are a different game (the Czech U18 pair on 17 and 18 Oct)
     from .base import TIME_MATCH as _TM

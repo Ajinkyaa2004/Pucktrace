@@ -62,5 +62,14 @@ check("Midland University is not Calvin University (learned by a wrong save, now
       str(team_similarity("Midland University", "MD2 Calvin University")))
 check("Midland University still matches itself", team_similarity("Midland University", "MD1 Midland University")[0] >= 0.9)
 
+# 5. A header naming a JV team: the varsity game of the pair is never "Found" over the JV game (2297012)
+p = lookup.parse_header("[2297012] Providence Catholic Celtics 0 - 0 HS Carmel Catholic Corsairs JV | United States High School, Illinois | 2026-11-21T04:00:00 | RL:8")
+cs = [cand(p, "Providence Celtics", "Carmel Corsairs", "2026-11-21T02:30", 2998572, league="IHSHL"),
+      cand(p, "Providence Celtics (JV)", "Carmel Corsairs (JV)", "2026-11-21T01:00", 2998721, league="IHSHL")]
+d = decide(p, copy.deepcopy(cs))
+check("JV header: the varsity game is not the answer",
+      not (d["verdict"] == "found" and "2998572" in d["best"]["url"]), str((d["verdict"], (d["best"] or {}).get("url"))))
+
+
 print("\nALL PASS" if not failures else f"\n{len(failures)} FAILED")
 sys.exit(1 if failures else 0)
