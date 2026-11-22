@@ -30,6 +30,11 @@ class Echl(Adapter):
     async def find(self, parsed, tm, kb):
         first = self.preferred_date(parsed)
         dates = [first] + [d for d in (parsed["date"], (datetime.date.fromisoformat(first) - datetime.timedelta(days=1)).isoformat()) if d != first]
+        if parsed.get("time"):
+            # with the header's time the day is certain (all 87 ECHL links of the 22 Nov sheet are
+            # on it). Other days hold the pair's other games of a weekend series: when Saturday's
+            # page could not be read, Friday's game was returned for a Saturday header (2197032)
+            dates = [first]
         names = []
         for key, raw in (("t1n", parsed["t1"]), ("t2n", parsed["t2"])):
             b = (tm.get(key) or {}).get("best") or {}
