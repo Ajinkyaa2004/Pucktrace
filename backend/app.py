@@ -579,6 +579,9 @@ async def admin_upload(name: str, request: Request):
         _j.loads(body)
     except Exception:
         raise HTTPException(400, "Not valid JSON")
+    if name == "users.json":
+        from . import users as _users
+        body = _users.guard_incoming(body)
     (ROOT / "data" / name).write_bytes(body)
     if name == "knowledge.json":
         KB = lookup.load_kb()
@@ -702,15 +705,21 @@ async def _data_sync_loop():
                         # never let a thinner knowledge base (a server that restarted empty) replace a full one
                         print(f"[data sync] refused {name} from {DATA_FROM}: {_kb_size(data)} entries vs {_kb_size(KB)} here", flush=True)
                         continue
-                    if not (f.exists() and f.read_bytes() == r.content):
-                        f.write_bytes(r.content)
+                    body = r.content
+                    if name == "users.json" and f.exists():
+                        from . import users as _users
+                        body = _users.guard_incoming(body)
+                    if not (f.exists() and f.read_bytes() == body):
+                        f.write_bytes(body)
                         if name == "knowledge.json":
                             KB = lookup.load_kb()
                         else:
                             _base._ALIASES = None
                             _base.team_similarity.cache_clear()
                         print(f"[data sync] {name} updated from {DATA_FROM}", flush=True)
-                    _os.utime(f, (theirs, theirs))            # same time on both: no copying back and forth
+                    if body == r.content:
+                        _os.utime(f, (theirs, theirs))        # same time on both: no copying back and forth
+                    # (a guarded users.json keeps its new time, so the other server takes the accounts back)
             SYNC.update(at=_t.strftime("%Y-%m-%dT%H:%M:%S"), ok=True, error=None)
         except Exception as e:
             SYNC.update(at=_t.strftime("%Y-%m-%dT%H:%M:%S"), ok=False, error=str(e)[:160])

@@ -285,6 +285,33 @@ def note_login(name: str):
             _save(d)
 
 
+def guard_incoming(raw: bytes, current: bytes | None = None) -> bytes:
+    """users.json arriving from the other server or the backup: a password or admin account here is
+    never replaced by a copy of it without a password (a name-only account of the same name, made
+    on a server that had lost its accounts: the admin could no longer sign in, 24 Nov 2026).
+    Accounts the other copy does not hold are left out, as before (a removal stays a removal)."""
+    try:
+        inc = json.loads(raw)
+        cur = (json.loads(current) if current is not None else json.loads(FILE.read_text())).get("users") or {}
+    except Exception:
+        return raw
+    out = dict(inc.get("users") or {})
+    kept = 0
+    for k, u in out.items():
+        mine = cur.get(k)
+        if mine and mine.get("hash") and not u.get("hash"):
+            devs = list(dict.fromkeys(list(mine.get("devices") or []) + list(u.get("devices") or [])))[-9:]
+            out[k] = dict(mine, devices=devs)
+            kept += 1
+        elif mine and mine.get("admin") and not u.get("admin") and u.get("hash") == mine.get("hash"):
+            out[k] = dict(u, admin=True)
+            kept += 1
+    if not kept:
+        return raw
+    print(f"[users] kept {kept} password account(s) a copy without a password would have replaced", flush=True)
+    return json.dumps(dict(inc, users=out), indent=1, ensure_ascii=False).encode()
+
+
 def main():
     a = sys.argv[1:]
     d = dict(users())

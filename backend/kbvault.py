@@ -113,6 +113,9 @@ def restore(data_dir: Path, key: str) -> list[str]:
                 continue
             if fname != "knowledge.json" and p.exists() and here >= f["mtime"]:
                 continue
+            if fname == "users.json" and p.exists():
+                from . import users as _users
+                raw = _users.guard_incoming(raw, p.read_bytes())
             p.write_bytes(raw)
             os.utime(p, (f["mtime"], f["mtime"]))
             done.append(fname)
