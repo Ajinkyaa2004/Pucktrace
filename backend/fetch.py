@@ -1,5 +1,10 @@
 """HTTP and headless-browser fetching with a small cache."""
 from __future__ import annotations
+import os as _os_pw
+if _os_pw.name == "nt":
+    # the office PC: the preview browser lives next to the app (C:\\PuckTrace\\browsers), the same
+    # folder for the one-time install and for every start, whichever account runs the server
+    _os_pw.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(__import__("pathlib").Path(__file__).resolve().parents[2] / "browsers"))
 import asyncio, time
 import httpx
 
@@ -294,13 +299,19 @@ def _blocked(title: str) -> bool:
     return "just a moment" in t or "attention required" in t or "security verification" in t
 
 
-async def browser_page(url: str, wait_ms: int = 6000, ttl: int = 600, js: str | None = None, viewport: dict | None = None, retries: int = 1):
+async def browser_page(url: str, wait_ms: int = 6000, ttl: int = 600, js: str | None = None, viewport: dict | None = None,
+                       retries: int = 1, light_ok: bool = False):
     """Load a page in headless Chromium (passes most Cloudflare checks).
-    Returns the page HTML, or the result of `js` evaluated in the page. None when blocked."""
+    Returns the page HTML, or the result of `js` evaluated in the page. None when blocked.
+    In light mode searches never use the browser (a browser installed for previews must not slow
+    them down), except readers that pass light_ok (a tournament site that only works in a browser)."""
     key = ("pw", url, js)
     hit = _cached(key, ttl)
     if hit is not None:
         return hit
+    from .roster_pages import LIGHT
+    if LIGHT and not light_ok:
+        raise RuntimeError("no browser for searches on this server")
     await _context()
     for attempt in range(retries + 1):
         async with _pw_sem:

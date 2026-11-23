@@ -792,7 +792,7 @@ def healthz():
     return dict(ok=True, server=SERVER, server_label=SERVER_LABEL, game_list=gl.get("games", 0), game_list_at=gl.get("at"), game_list_from=gl.get("source"), knowledge_base=len(KB.get("teams") or {}) > 0,
                 version=(_os.environ.get("APP_VERSION") or _os.environ.get("RENDER_GIT_COMMIT", ""))[:7] or None,
                 kb_teams=len(KB.get("teams") or {}), uptime_s=int(_time.time() - _STARTED), rss_mb=_rss_mb(),
-                searches=sum(1 for v in _JOBS.values() if v["status"] == "running"), max_searches=_max_searches(),
+                searches=sum(1 for v in _JOBS.values() if v["status"] == "running"), max_searches=_max_searches(), previews=SHOTS["state"],
                 game_list_error=gl.get("error"), sync=SYNC, backup_key=bool(_os.environ.get("KB_KEY")))
 
 
@@ -1486,9 +1486,39 @@ async def _cache_cleanup_loop():
         await asyncio.sleep(24 * 3600)
 
 
+# Previews on a light server (the office PC): PREVIEWS=1 installs Chromium once, in the background,
+# and uses it for the preview panel only; searches stay browser-free (fetch.browser_page).
+SHOTS = dict(ready=False, state="off")
+
+
+def _install_preview_browser():
+    import subprocess, sys as _sys
+    from . import fetch as _f       # sets the browser folder (PLAYWRIGHT_BROWSERS_PATH) the install uses  # noqa: F401
+    SHOTS["state"] = "installing"
+    try:
+        r = subprocess.run([_sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True,
+                           text=True, timeout=1800)
+        ok = r.returncode == 0
+        SHOTS.update(ready=ok, state="ready" if ok else "install failed: " + (r.stderr or r.stdout)[-300:])
+    except Exception as e:
+        SHOTS.update(ready=False, state=f"install failed: {e}")
+    print(f"[previews] {SHOTS['state']}", flush=True)
+
+
+def _previews_on() -> bool:
+    from .roster_pages import LIGHT
+    return (not LIGHT) or SHOTS["ready"]
+
+
 @app.on_event("startup")
 async def _start_harvest():
     import asyncio
+    from .roster_pages import LIGHT
+    # on by default on the Windows office PC (its run.cmd is not edited: Windows reads a running
+    # .cmd file as it goes, so changing it under the server loop could stop the restarts)
+    if LIGHT and _os.environ.get("PREVIEWS", "1" if _os.name == "nt" else "0") == "1":
+        import threading
+        threading.Thread(target=_install_preview_browser, daemon=True).start()
     if _os.environ.get("GAME_LIST", "1") != "0":
         asyncio.create_task(_game_list_loop())
     asyncio.create_task(_daily_harvest())
@@ -1552,7 +1582,7 @@ def index():
 def config():
     from .roster_pages import LIGHT
     return dict(teams=len(KB["teams"]), tournaments=len(KB["tournaments"]), saved=len(KB.get("history", [])),
-                vpn_sites=lookup.load_vpn(), upload_sessions=lookup.UPLOAD_SESSIONS, previews=not LIGHT)
+                vpn_sites=lookup.load_vpn(), upload_sessions=lookup.UPLOAD_SESSIONS, previews=_previews_on())
 
 
 @app.post("/api/search")
@@ -1768,6 +1798,11 @@ def _job_start(key: str, factory, on_done=None, who: str = "", header: str = "")
         try:
             async with _JOB_SEM:
                 j["result"] = await _WORKERS.run(factory)
+            try:                                  # the league site's game page next to a HockeyTech report
+                from . import gamecenter
+                gamecenter.annotate(j["result"])
+            except Exception:
+                pass
             j["status"] = "done"
             if on_done:
                 _aio.create_task(on_done(j["result"], round(_time.time() - j["started"], 1)))
@@ -1985,7 +2020,15 @@ async def shot(url: str):
     if not url.startswith("http") or any(d.endswith(b) for b in NO_PREVIEW):
         raise HTTPException(404, "This site blocks previews, open it in Chrome")
     from .roster_pages import LIGHT
-    if LIGHT:
+    img = cached_screenshot(url)
+    if img:
+        return Response(content=img, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=21600"})
+    if LIGHT and SHOTS["ready"]:
+        # previews come after searches: while the server is busy searching, the page asks again shortly
+        running = sum(1 for v in _JOBS.values() if v["status"] == "running")
+        if running >= max(2, _max_searches() // 2):
+            raise HTTPException(503, "Busy searching, preview in a moment")
+    elif LIGHT:
         # no browser on a small server: a preview made earlier is served, nothing else is tried.
         # (Trying used to start a browser helper per request that was never cleaned up, until the
         # container ran out of memory and was killed.)
@@ -1994,7 +2037,7 @@ async def shot(url: str):
             raise HTTPException(404, "No preview on this server, open it in Chrome")
         return Response(content=img, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=21600"})
     global _SHOT_SEM
-    _SHOT_SEM = _SHOT_SEM or _aio.Semaphore(3)
+    _SHOT_SEM = _SHOT_SEM or _aio.Semaphore(2 if LIGHT else 3)
     async with _SHOT_SEM:
         img = await screenshot(url)
     if not img:

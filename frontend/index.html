@@ -1116,6 +1116,9 @@ stats();
 /* ---------- preview items ---------- */
 let ITEMS=[];
 const item=o=>(ITEMS.push(o),ITEMS.length-1);
+// a HockeyTech report also has its game on the league's website (box score, line-ups): its link, ready to copy
+function gcHtml(r){if(!r||!r.game_center)return'';
+  return `<div class="gc" style="margin-top:10px"><div class="mu2 small" style="margin-bottom:6px">Game center on ${esc(host(r.game_center))}</div><div class="acts"><a class="btn2" href="${esc(r.game_center)}" target="_blank" rel="noopener">${ic('ext')}Open game center</a><button class="btn2" data-copy="${esc(r.game_center)}">${ic('copy')}Copy link</button></div></div>`}
 function shotHtml(url,cls=''){
   return `<div class="shot ${cls}" data-shot="${esc(url)}"><img alt="Preview of ${esc(host(url))}" decoding="async" loading="lazy"><div class="ph"><span class="spin"></span>Loading preview…</div><span class="zoom">${ic('search','xs')}Enlarge</span></div>`}
 function wireShots(root){
@@ -1123,7 +1126,10 @@ function wireShots(root){
     if(el._w)return;el._w=1;const img=el.querySelector('img'),u=el.dataset.shot;
     if(!PREVIEWS){el.classList.add('failed');el.querySelector('.ph').innerHTML=`${ic('globe','')}<div>No preview on this server</div><a href="${esc(u)}" target="_blank" rel="noopener" class="btn2">${ic('ext')}Open ${esc(host(u))}</a>`;return}
     img.onload=()=>{el.classList.add('loaded');img.classList.add('in')};
-    img.onerror=async()=>{el.classList.add('failed');let m='Preview not available';try{const r=await fetch(shotUrl(u));m=(await r.json()).detail||m}catch(e){}
+    let tries=0;
+    img.onerror=async()=>{let m='Preview not available',st=0;try{const r=await fetch(shotUrl(u));st=r.status;m=(await r.json()).detail||m}catch(e){}
+      if(st===503&&tries++<8){setTimeout(()=>{img.src=shotUrl(u)+'&r='+tries},4000);return}   // busy searching: previews wait their turn
+      el.classList.add('failed');
       el.querySelector('.ph').innerHTML=`${ic('globe','')}<div>${esc(m)}</div><a href="${esc(u)}" target="_blank" rel="noopener" class="btn2">${ic('ext')}Open ${esc(host(u))}</a>`};
     img.src=shotUrl(u);
   })}
@@ -1324,18 +1330,18 @@ function render(r,header){
   if(found){
     const i=item({title:`${found.home} vs ${found.away}`,url:found.url,sub:found.date,facts:''});
     rep=`<div class="rep"><div class="frame" data-p="${i}">${shotHtml(found.url)}</div><div class="facts">${reportFacts(found)}
-      <div class="acts"><a class="btn2 pri" href="${esc(found.url)}" target="_blank" rel="noopener">${ic('ext')}Open report</a><button class="btn2" data-copy="${esc(found.url)}">${ic('copy')}Copy link</button></div>${whyHtml(found)}</div></div>`;
+      <div class="acts"><a class="btn2 pri" href="${esc(found.url)}" target="_blank" rel="noopener">${ic('ext')}Open report</a><button class="btn2" data-copy="${esc(found.url)}">${ic('copy')}Copy link</button></div>${gcHtml(found)}${whyHtml(found)}</div></div>`;
     if(auto.candidates.length>1)rep+=`<div class="mu2 small" style="margin-top:14px">${auto.candidates.length-1} other game${auto.candidates.length>2?'s':''} seen that day, not this one.</div>`;
   }else if(savedLink){
     const i=item({title:'Saved report',url:savedLink.url,sub:savedLink.note});
     rep=`<div class="rep"><div class="frame" data-p="${i}">${shotHtml(savedLink.url)}</div><div class="facts"><div><span class="badge ok">${ic('bookmark','xs')}Saved earlier</span></div><div class="mu small">${esc(savedLink.note||'')}</div>
-      <div class="acts"><a class="btn2 pri" href="${esc(savedLink.url)}" target="_blank" rel="noopener">${ic('ext')}Open report</a><button class="btn2" data-copy="${esc(savedLink.url)}">${ic('copy')}Copy link</button></div></div></div>`;
+      <div class="acts"><a class="btn2 pri" href="${esc(savedLink.url)}" target="_blank" rel="noopener">${ic('ext')}Open report</a><button class="btn2" data-copy="${esc(savedLink.url)}">${ic('copy')}Copy link</button></div>${gcHtml(savedLink)}</div></div>`;
   }else if(auto.verdict==='check'){
     rep=`<div class="cands">${auto.candidates.map((c,k)=>{
       const i=item({title:`${c.home} vs ${c.away}`,url:c.url,sub:`${c.date} · ${c.site}`,facts:`<div class="facts">${reportFacts(c)}</div>`});
       return `<div class="cand" data-k="${k}"><div data-p="${i}">${shotHtml(c.url)}</div><div class="c"><div class="t">${esc(c.home)} <span class="mu2" style="font-weight:400">vs</span> ${esc(c.away)}</div>
         <div class="m">${esc(c.when||c.date)}${c.score?' · '+esc(c.score):''} · ${esc(c.site)}${c.league?' · '+esc(c.league):''}</div>${c.via==='index'?`<div><span class="badge ok">${ic('bolt','xs')}Remembered</span></div>`:''}${c.blocked?blockedNote(c,k):confBar(c.confidence)}${vpnNote(c)}
-        <div class="acts">${c.kind==='schedule'||!IS_ADMIN?'':`<button class="btn2 pick" data-url="${esc(c.url)}" data-k="${k}" data-ch="${esc(c.ch_id||'')}" data-cid="${esc(c.comp_id||'')}">${ic('check')}This one</button>`}<a class="btn2" href="${esc(c.url)}" target="_blank" rel="noopener">${ic('ext')}${c.kind==='schedule'?'Open schedule':'Open'}</a></div></div></div>`}).join('')}</div>`;
+        <div class="acts">${c.kind==='schedule'||!IS_ADMIN?'':`<button class="btn2 pick" data-url="${esc(c.url)}" data-k="${k}" data-ch="${esc(c.ch_id||'')}" data-cid="${esc(c.comp_id||'')}">${ic('check')}This one</button>`}<a class="btn2" href="${esc(c.url)}" target="_blank" rel="noopener">${ic('ext')}${c.kind==='schedule'?'Open schedule':'Open'}</a>${c.game_center?`<a class="btn2" href="${esc(c.game_center)}" target="_blank" rel="noopener">${ic('ext')}Game center</a>`:''}</div></div></div>`}).join('')}</div>`;
   }else{
     const srcs=auto.adapters.filter(a=>a.name!=='index'),ok=srcs.filter(a=>a.ok).map(a=>a.site),bad=srcs.filter(a=>!a.ok);
     rep=`<div class="note">${ic('alert')}<div><b>No report found automatically.</b><div style="margin-top:3px">${srcs.length?`Checked memory and ${srcs.length} site${srcs.length>1?'s':''} in ${auto.seconds}s: ${esc(ok.join(', '))}${bad.length?` · did not respond: ${esc(bad.map(a=>a.site).join(', '))}`:''}.`:'No automatic source covers these teams yet.'} Use the rosters below, or search by hand from the links further down.</div>${bad.length?`<button class="btn2" style="margin-top:10px" onclick="find()">${ic('refresh')}Search again</button>`:''}</div></div>`;

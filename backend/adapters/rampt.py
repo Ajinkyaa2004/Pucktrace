@@ -138,7 +138,7 @@ class RampTournament(Adapter):
         # Python 3.9 under asyncio.run, fails when two renders wait on it concurrently
         rows = []
         for d, (tid, _) in pick.items():
-            rows.append(await browser_page(SCHED.format(base=base, tid=tid, div=d), wait_ms=5000, ttl=3 * 3600, js=JS))
+            rows.append(await browser_page(SCHED.format(base=base, tid=tid, div=d), wait_ms=5000, ttl=3 * 3600, js=JS, light_ok=True))
         out, seen = [], set()
         for d, rs in zip(pick, rows):
             tid, dname = pick[d]
