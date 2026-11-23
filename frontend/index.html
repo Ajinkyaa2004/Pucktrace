@@ -1126,13 +1126,23 @@ function wireShots(root){
     if(el._w)return;el._w=1;const img=el.querySelector('img'),u=el.dataset.shot;
     if(!PREVIEWS){el.classList.add('failed');el.querySelector('.ph').innerHTML=`${ic('globe','')}<div>No preview on this server</div><a href="${esc(u)}" target="_blank" rel="noopener" class="btn2">${ic('ext')}Open ${esc(host(u))}</a>`;return}
     img.onload=()=>{el.classList.add('loaded');img.classList.add('in')};
-    let tries=0;
-    img.onerror=async()=>{let m='Preview not available',st=0;try{const r=await fetch(shotUrl(u));st=r.status;m=(await r.json()).detail||m}catch(e){}
-      if(st===503&&tries++<8){setTimeout(()=>{img.src=shotUrl(u)+'&r='+tries},4000);return}   // busy searching: previews wait their turn
-      el.classList.add('failed');
+    const fail=m=>{el.classList.add('failed');
       el.querySelector('.ph').innerHTML=`${ic('globe','')}<div>${esc(m)}</div><a href="${esc(u)}" target="_blank" rel="noopener" class="btn2">${ic('ext')}Open ${esc(host(u))}</a>`};
-    img.src=shotUrl(u);
+    shotBlob(u).then(b=>{img.src=b}).catch(e=>fail(e.message||'Preview not available'));
   })}
+// a preview is fetched with the sign-in (an <img> alone can't send it), then shown from memory;
+// while the server is busy searching it answers 503 and the page asks again (previews wait their turn)
+const SHOTS_MEM=new Map();
+function shotBlob(u){
+  if(SHOTS_MEM.has(u))return SHOTS_MEM.get(u);
+  const p=(async()=>{for(let i=0;i<9;i++){
+      const r=await fetch(shotUrl(u),{headers:hdrs(false)});
+      if(r.ok)return URL.createObjectURL(await r.blob());
+      let m='Preview not available';try{m=(await r.json()).detail||m}catch(e){}
+      if(r.status!==503)throw new Error(m);
+      await new Promise(z=>setTimeout(z,4000))}
+    throw new Error('Busy searching, open the page instead')})();
+  SHOTS_MEM.set(u,p);p.catch(()=>SHOTS_MEM.delete(u));return p}
 function rowHtml(it,sub){const i=item(it);
   return `<div class="row" data-p="${i}" tabindex="0"><span class="fav">${ic(it.icon||'link')}</span><div class="l"><div class="a">${esc(it.title)}</div><div class="d">${sub||esc(host(it.url))}</div></div>${it.badge||''}<a class="open" href="${esc(it.url)}" target="_blank" rel="noopener" title="Open site" aria-label="Open site">${ic('ext')}</a></div>`}
 
@@ -1185,7 +1195,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.r
 /* warm the preview while the pointer rests on a row */
 const warmed=new Set();
 document.addEventListener('pointerover',e=>{const r=e.target.closest('.row[data-p]');if(!r)return;const it=ITEMS[+r.dataset.p];if(!it||warmed.has(it.url))return;
-  if(!PREVIEWS)return;clearTimeout(r._w);r._w=setTimeout(()=>{warmed.add(it.url);fetch(shotUrl(it.url)).catch(()=>{})},150)});
+  if(!PREVIEWS)return;clearTimeout(r._w);r._w=setTimeout(()=>{warmed.add(it.url);shotBlob(it.url).catch(()=>{})},150)});
 const playersHtml=ps=>{const pos=ps.some(p=>p.pos);return `<div class="plist"><table><thead><tr><th class="n">#</th><th>Player</th>${pos?'<th class="p">Pos</th>':''}<th class="b">Born</th></tr></thead><tbody>${ps.map(p=>`<tr><td class="n">${esc(p.n)}</td><td>${esc(p.name)}</td>${pos?`<td class="p">${esc(p.pos||'')}</td>`:''}<td class="b">${esc(p.born||'')}</td></tr>`).join('')}</tbody></table></div>`};
 
 /* ---------- find ---------- */
