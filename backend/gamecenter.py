@@ -36,8 +36,31 @@ def _load() -> dict:
     return _data
 
 
+# TimeToScore: the league sites embed TimeToScore's game widget with the same game number
+# (data/tts_league_sites.json). One TimeToScore host serves several leagues; the first word of
+# the league in the game list says which ("AHF 14U AA", "THF 16U", "NCDC Junior").
+TTS = re.compile(r"stats\.(\w+)\.timetoscore\.com/+(?:oss-scoresheet|generate-scorecard\.php)\?.*?game_id=(\d+)", re.I)
+TTS_SITES = {
+    ("blackbear", "ahf"): "https://atlantichockeyfederation.com/gamecenter-2526/?game={id}&league=4",
+    ("blackbear", "thf"): "https://www.tier1hockeyfederation.com/gamecenter-widget/?game={id}&league=5",
+    ("blackbear", "aghf"): "https://atlanticgirlshockeyfederation.com/gamecenter-2526/?game={id}&league=3",
+    ("blackbear", "nghl"): "https://nghlhockey.com/game-center-red/?game={id}",
+    ("usphl", "ncdc"): "https://usphl.com/ncdc/game-center/?game_id={id}",
+    ("usphl", "premier"): "https://usphl.com/premier/game-center/?game_id={id}",
+    ("usphl", "elite"): "https://usphl.com/elite/game-center/?game_id={id}",
+}
+
+
 def link(report_url: str, league: str = "") -> str | None:
-    """The league site's game page for a HockeyTech report, or None when the site is not known."""
+    """The league site's game page for a HockeyTech or TimeToScore report, or None when the site
+    is not known."""
+    t = TTS.search(report_url or "")
+    if t:
+        first = (league or "").strip().split(" ")[0].lower()
+        url = TTS_SITES.get((t.group(1).lower(), first))
+        if url and first == "nghl" and re.search(r"\bblue\b", league or "", re.I):
+            url = url.replace("game-center-red", "game-center-blue")      # NGHL's Blue division page
+        return url.replace("{id}", t.group(2)) if url else None
     m = REPORT.search(report_url or "")
     if not m:
         return None
@@ -54,7 +77,7 @@ def annotate(obj, _depth: int = 0):
         return obj
     if isinstance(obj, dict):
         u = obj.get("url")
-        if isinstance(u, str) and "hockeytech.com/game_reports" in u and not obj.get("game_center"):
+        if isinstance(u, str) and ("hockeytech.com/game_reports" in u or "timetoscore.com" in u) and not obj.get("game_center"):
             g = link(u, obj.get("league") or "")
             if g:
                 obj["game_center"] = g

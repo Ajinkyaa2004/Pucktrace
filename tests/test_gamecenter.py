@@ -32,5 +32,13 @@ G.annotate(res)
 check("a search result gets the links added", res["auto"]["best"].get("game_center") == "https://chl.ca/whl/gamecentre/5/"
       and res["auto"]["candidates"][0].get("game_center") == "https://bchl.ca/stats/game-center/7", str(res))
 
+T = "https://stats.blackbear.timetoscore.com/oss-scoresheet?game_id={g}&mode=display"
+check("TimeToScore AGHF game 80541: the girls' federation game center",
+      G.link(T.format(g=80541), "AGHF 14U Diamond") == "https://atlanticgirlshockeyfederation.com/gamecenter-2526/?game=80541&league=3")
+check("TimeToScore THF: tier1hockeyfederation.com", G.link(T.format(g=94943), "THF 16U") == "https://www.tier1hockeyfederation.com/gamecenter-widget/?game=94943&league=5")
+check("NGHL Blue division: its own page", "game-center-blue" in (G.link(T.format(g=86980), "NGHL - Blue 19U") or ""))
+check("USPHL Premier", G.link("https://stats.usphl.timetoscore.com/oss-scoresheet?game_id=26155&mode=display", "Premier Junior") == "https://usphl.com/premier/game-center/?game_id=26155")
+check("a TimeToScore league without a known site: none", G.link("https://stats.caha.timetoscore.com/oss-scoresheet?game_id=1&mode=display", "CAHA 14U AA") is None)
+
 print("\nALL PASS" if not failures else f"\n{len(failures)} FAILED")
 sys.exit(1 if failures else 0)
