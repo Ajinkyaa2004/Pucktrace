@@ -35,7 +35,7 @@ import asyncio, datetime, json, re, statistics, time
 from pathlib import Path
 from urllib.parse import quote
 
-from .fetch import get_text, get_json
+from .fetch import get_text, get_json, browser_page
 from .lookup import tokens, norm, domain, load_kb
 from .adapters.base import team_similarity
 
