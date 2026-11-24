@@ -19,9 +19,10 @@ FILE = ROOT / "data" / "roster_links.json"
 IMAGE_HOSTS = re.compile(r"prnt\.sc|prntscr\.com|skrinshoter|ibb\.co|imgur\.com|lightshot|gyazo|snipboard", re.I)
 SHOT = re.compile(r"prnt\.sc|skrinshoter|ibb\.co|imgur\.com|lightshot|gyazo|snipboard|drive\.google|docs\.google|"
                   r"dropbox|wetransfer|\.png\b|\.jpe?g\b", re.I)
+SPORDLE = re.compile(r"page\.spordle\.com/([\w-]+)/schedule/\d+|pdf\.play\.spordle\.com/game/\d+", re.I)
 URL = re.compile(r"https?://[^\s,;\"'<>]+")
 KEEP = 3                      # links per team, newest first
-VERSION = 4                   # raise when build() changes: servers rebuild the file at startup
+VERSION = 5                   # raise when build() changes: servers rebuild the file at startup
 _cache: dict = {"mtime": None, "teams": {}}
 
 
@@ -40,6 +41,7 @@ def build(path: Path | None = None, log=print) -> dict:
     from . import sheet, lookup
     teams: dict = {}
     shot_teams: dict = {}
+    spordle: dict = {}
     n = shots = 0
     for r in sheet.rows(path or sheet.PROGRESS):
         try:
@@ -48,6 +50,15 @@ def build(path: Path | None = None, log=print) -> dict:
             p = None
         if not p or not p.get("date"):
             continue
+        # the protocol on Spordle (sites that block automatic reading): both teams' games are there
+        sp = SPORDLE.search(str(r.get("link") or ""))
+        if sp:
+            for t in ("t1", "t2"):
+                e = spordle.setdefault(key(p[t]), dict(org=None, games=0, last=p["date"]))
+                e["games"] += 1
+                e["last"] = max(e["last"], p["date"])
+                if sp.group(1) and (not e["org"] or p["date"] >= e.get("org_date", "")):
+                    e.update(org=sp.group(1).lower(), org_date=p["date"])
         both = [{_url(u) for u in URL.findall(str(r.get(c) or ""))} for c in ("l1", "l2")]
         for col, t in (("l1", "t1"), ("l2", "t2")):
             for u in URL.findall(str(r.get(col) or "")):
@@ -91,7 +102,8 @@ def build(path: Path | None = None, log=print) -> dict:
         lst.sort(key=lambda x: x["date"], reverse=True)
         del lst[2:]
     log(f"roster links: {n} links for {len(teams)} teams; {shots} screenshots ({len(shot_teams)} teams) kept to open")
-    return dict(v=VERSION, built=datetime.datetime.now().isoformat(timespec="seconds"), teams=teams, shots=shot_teams)
+    log(f"spordle: {len(spordle)} teams play on Spordle sites, {sum(1 for x in spordle.values() if x['org'])} with their association's page")
+    return dict(v=VERSION, built=datetime.datetime.now().isoformat(timespec="seconds"), teams=teams, shots=shot_teams, spordle=spordle)
 
 
 def save(data: dict) -> None:
@@ -107,7 +119,7 @@ def links(team_name: str, date: str | None = None) -> list[dict]:
         m = FILE.stat().st_mtime
         if m != _cache["mtime"]:
             d = json.loads(FILE.read_text(encoding="utf-8"))
-            _cache.update(mtime=m, teams=d.get("teams") or {}, shots=d.get("shots") or {})
+            _cache.update(mtime=m, teams=d.get("teams") or {}, shots=d.get("shots") or {}, spordle=d.get("spordle") or {})
     except Exception:
         return []
     return _season(_cache["teams"].get(key(team_name)) or [], date)
@@ -142,3 +154,26 @@ def stats() -> dict:
         return dict(teams=len(d.get("teams") or {}), built=d.get("built"), v=d.get("v"))
     except Exception as e:
         return dict(teams=0, error=str(e)[:80])
+
+
+def spordle(team_name: str) -> dict | None:
+    """{org: association page name or None, games, last} when the analysts found this team's games
+    on Spordle (page.spordle.com / pdf.play.spordle.com)."""
+    links(team_name)                        # loads the file
+    sp = _cache.get("spordle") or {}
+    e = sp.get(key(team_name))
+    if not e or e.get("org"):
+        return e
+    # no association page for this team itself: the association whose page name carries the
+    # team's town ("Thunder Bay Queens" -> thunder-bay-minor-hockey-association)
+    words = re.findall(r"[a-z]+", team_name.lower())
+    best = None
+    for org in {x["org"] for x in sp.values() if x.get("org")}:
+        parts = org.split("-")
+        for n in (3, 2, 1):
+            town = words[:n]
+            if len(town) == n and parts[:n] == town and (n > 1 or len(town[0]) >= 5):
+                if not best or n > best[0]:
+                    best = (n, org)
+                break
+    return dict(e, org=best[1], org_from="name") if best else e
