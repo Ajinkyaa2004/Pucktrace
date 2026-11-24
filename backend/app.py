@@ -525,7 +525,12 @@ async def admin_sheet_apply(inp: SheetApplyIn):
             KB = lookup.load_kb()
             _base._ALIASES = None
             _base.team_similarity.cache_clear()
-            for f in ("knowledge.json", "aliases_learned.json"):
+            try:                                  # the analysts' roster links, for games with no report
+                from . import roster_links
+                roster_links.save(await asyncio.to_thread(roster_links.build, None, _learn_log))
+            except Exception as e:
+                _learn_log(f"roster links: {e}")
+            for f in ("knowledge.json", "aliases_learned.json", "roster_links.json"):
                 _push_file(f)
             _learn_log("knowledge and spellings in use here, and sent to the other server")
             if inp.accuracy:
@@ -562,7 +567,8 @@ def session(request: Request):
 
 # private data files the servers receive by upload and keep in step with each other; the GameSheet
 # team list lets the roster lookup find GameSheet teams whose game wasn't found
-DATA_FILES = ("knowledge.json", "aliases_learned.json", "sheet_log.json", "gamesheet_teams.json", "users.json", "announce.json")
+DATA_FILES = ("knowledge.json", "aliases_learned.json", "sheet_log.json", "gamesheet_teams.json", "users.json", "announce.json",
+              "roster_links.json")
 
 
 @app.post("/api/admin/upload")
@@ -1516,6 +1522,22 @@ async def _start_harvest():
     from .roster_pages import LIGHT
     # on by default on the Windows office PC (its run.cmd is not edited: Windows reads a running
     # .cmd file as it goes, so changing it under the server loop could stop the restarts)
+    # the analysts' roster links: built from the last uploaded RTT sheet when the file is missing or older
+    try:
+        from . import roster_links
+        sheet_file = ROOT / "data" / "progress.xlsx"
+        if sheet_file.exists() and (not roster_links.FILE.exists() or roster_links.FILE.stat().st_mtime < sheet_file.stat().st_mtime):
+            import threading
+
+            def _build_links():
+                try:
+                    roster_links.save(roster_links.build())
+                    _push_file("roster_links.json")
+                except Exception as e:
+                    print("[roster links]", e, flush=True)
+            threading.Thread(target=_build_links, daemon=True).start()
+    except Exception as e:
+        print("[roster links]", e, flush=True)
     if LIGHT and _os.environ.get("PREVIEWS", "1" if _os.name == "nt" else "0") == "1":
         import threading
         threading.Thread(target=_install_preview_browser, daemon=True).start()

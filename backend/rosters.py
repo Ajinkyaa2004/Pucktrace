@@ -219,9 +219,11 @@ async def team_rosters(team: dict | None, header_team: str, parsed: dict, game: 
     TimeToScore, ...), then the Club Data pages; shaped for the app's roster box."""
     from .roster_sources import find_rosters
     from .lookup import load_kb
+    as_written = parsed.get(key) if key else header_team          # the header's own name: the analysts' links are filed under it
     if key:
         header_team, _ = effective_team(parsed, key, game)
-    rs = await find_rosters(header_team, parsed["date"], dict(team=team or {}, comp=parsed["comp"], kb=load_kb(), game=game or {}, fallback=not quick))
+    rs = await find_rosters(header_team, parsed["date"], dict(team=team or {}, comp=parsed["comp"], kb=load_kb(), game=game or {},
+                                                              fallback=not quick, header_team=as_written))
     out = []
     for r in rs:
         pl = r.get("players")

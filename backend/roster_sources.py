@@ -87,6 +87,9 @@ def finish(r: dict, team_name: str, date: str) -> dict:
     elif n > 40:
         r["status"] = "check"
         r["note"] += "; too many players for one team (camp, preseason or a whole club)"
+    elif n >= 10 and not proper(r.get("players") or []):
+        r["status"] = "check"
+        r["note"] += "; no jersey numbers or full names for most players"
     elif n >= 10:
         r["status"] = "verified"
     else:
@@ -104,7 +107,7 @@ def rank(r: dict) -> tuple:
     """Status first; then how the team was identified: from the game itself, confirmed by two sources,
     by an id on file (Club Data link), by name only; then name score and source."""
     by = "confirmed" if r.get("confirmed") and r.get("by") != "game" else r.get("by")
-    return (STATUS_ORDER.get(r.get("status"), 6), BY_ORDER.get(by, 4), -round(r.get("match", 0), 1),
+    return (STATUS_ORDER.get(r.get("status"), 6), 0 if r.get("sheet_link") else 1, BY_ORDER.get(by, 4), -round(r.get("match", 0), 1),
             SOURCE_RANK.get(r.get("source"), 2), -len(r.get("players") or []))
 
 
@@ -964,6 +967,64 @@ async def from_pages(team_name: str, date: str, team: dict) -> list[dict]:
     return out
 
 
+# ---------------------------------------------------------------- roster links from the RTT sheet
+
+HT_ROSTER_PAGE = re.compile(r"https?://(?:www\.)?([^/]+)/stats/roster/(\d+)/(\d+)")
+
+
+def proper(players: list[dict]) -> bool:
+    """A roster the analysts can use: most players listed with a jersey number and a full name."""
+    if not players:
+        return False
+    full = [p for p in players if len((p.get("name") or "").split()) >= 2]
+    numbered = [p for p in full if str(p.get("number") or "").strip().lstrip("#").isdigit()]
+    return len(numbered) >= max(8, 0.6 * len(players))
+
+
+async def _read_link(url: str, date: str) -> dict | None:
+    """One analyst roster link read with the reader that fits its site."""
+    m = GS_TEAM_LINK.search(url)
+    if m:
+        return await gs_roster(m.group(1), m.group(2), date)
+    m = EP_TEAM.search(url)
+    if m:
+        return await ep_roster(m.group(1), date)
+    m = HT_ROSTER_PAGE.match(url)
+    if m:
+        host = m.group(1).lower()
+        code = next((c for c, (_, sites) in ht_keys().items() if host in [x.lower() for x in sites]), None)
+        if code:
+            return await ht_roster(code, m.group(3), m.group(2), date, team_site=host)
+    from . import roster_pages
+    r = await roster_pages.read(url, browser=False)
+    if r.get("blocked") or not r.get("players"):
+        return None
+    players = [dict(number=x.get("number"), name=x.get("name"), pos=x.get("pos"), birth_year=x.get("birth_year")) for x in r["players"]]
+    return dict(url=url, source="Roster link on file", season=r.get("season"), players=players, team=None, league="",
+                note=f"{domain(url)} roster page, {len(players)} players", season_shown=bool(r.get("season")))
+
+
+async def from_sheet_links(team_name: str, date: str) -> list[dict]:
+    """The roster links analysts used for this team this season (RTT sheet), newest first."""
+    from . import roster_links
+    lst = roster_links.links(team_name, date)
+    if not lst:
+        return []
+    res = await asyncio.gather(*[_read_link(x["url"], date) for x in lst], return_exceptions=True)
+    cur = season_label(season_start(date))
+    out = []
+    for x, r in zip(lst, res):
+        if not isinstance(r, dict) or not r.get("players"):
+            continue
+        if not r.get("season"):
+            r["season"] = cur          # used by an analyst this season; the page shows no season of its own
+            r["season_shown"] = False
+        r.update(match=1.0, by="id", sheet_link=x["url"])
+        r["note"] += f" (roster link analysts used on {x['date']})"
+        out.append(r)
+    return out
+
+
 # ---------------------------------------------------------------- entry point
 
 async def find_rosters(team_name: str, date: str, hints: dict | None = None) -> list[dict]:
@@ -984,7 +1045,8 @@ async def find_rosters(team_name: str, date: str, hints: dict | None = None) -> 
     comp_ages = sorted(a for a in tokens(ctx(hints.get("comp") or ""))[1] if len(a) <= 2)
     if not tokens(team_name)[1] and len(comp_ages) == 1:
         team_name = f"{team_name} U{comp_ages[0]}"      # "Toronto Jr. Aeros" in "GTHL U12 AA": the U12 team
-    jobs = [from_ep(team_name, date, team), from_gamesheet(team_name, date, team, game),
+    header_name = hints.get("header_team") or team_name
+    jobs = [from_sheet_links(header_name, date), from_ep(team_name, date, team), from_gamesheet(team_name, date, team, game),
             from_hockeytech(team_name, date, team, game), from_timetoscore(team_name, date, team, game, kb),
             from_observer(team_name, date, team)]
     res = await asyncio.gather(*jobs, return_exceptions=True)
