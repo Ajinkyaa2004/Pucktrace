@@ -1119,8 +1119,11 @@ const item=o=>(ITEMS.push(o),ITEMS.length-1);
 // a HockeyTech report also has its game on the league's website (box score, line-ups): its link, ready to copy
 function gcHtml(r){if(!r||!r.game_center)return'';
   return `<div class="gc" style="margin-top:10px"><div class="mu2 small" style="margin-bottom:6px">Game center on ${esc(host(r.game_center))}</div><div class="acts"><a class="btn2 pri" href="${esc(r.game_center)}" target="_blank" rel="noopener">${ic('ext')}Open game center</a><button class="btn2" data-copy="${esc(r.game_center)}">${ic('copy')}Copy link</button></div></div>`}
-function shotHtml(url,cls=''){
-  return `<div class="shot ${cls}" data-shot="${esc(url)}"><img alt="Preview of ${esc(host(url))}" decoding="async" loading="lazy"><div class="ph"><span class="spin"></span>Loading preview…</div><span class="zoom">${ic('search','xs')}Enlarge</span></div>`}
+// the preview shows the game center when there is one (a fuller page than the box score); if it
+// can't be made, the report's own preview is shown instead
+const pvOf=r=>(r&&r.game_center)||(r&&r.url)||'';
+function shotHtml(url,cls='',fb=''){
+  return `<div class="shot ${cls}" data-shot="${esc(url)}"${fb&&fb!==url?` data-fb="${esc(fb)}"`:''}><img alt="Preview of ${esc(host(url))}" decoding="async" loading="lazy"><div class="ph"><span class="spin"></span>Loading preview…</div><span class="zoom">${ic('search','xs')}Enlarge</span></div>`}
 function wireShots(root){
   root.querySelectorAll('.shot[data-shot]').forEach(el=>{
     if(el._w)return;el._w=1;const img=el.querySelector('img'),u=el.dataset.shot;
@@ -1128,7 +1131,8 @@ function wireShots(root){
     img.onload=()=>{el.classList.add('loaded');img.classList.add('in')};
     const fail=m=>{el.classList.add('failed');
       el.querySelector('.ph').innerHTML=`${ic('globe','')}<div>${esc(m)}</div><a href="${esc(u)}" target="_blank" rel="noopener" class="btn2">${ic('ext')}Open ${esc(host(u))}</a>`};
-    shotBlob(u).then(b=>{img.src=b}).catch(e=>fail(e.message||'Preview not available'));
+    const fb=el.dataset.fb;
+    shotBlob(u).then(b=>{img.src=b}).catch(e=>fb?shotBlob(fb).then(b=>{img.src=b}).catch(e2=>fail(e2.message||'Preview not available')):fail(e.message||'Preview not available'));
   })}
 // a preview is fetched with the sign-in (an <img> alone can't send it), then shown from memory;
 // while the server is busy searching it answers 503 and the page asks again (previews wait their turn)
@@ -1155,7 +1159,7 @@ function openPreview(i){
   let h='';
   if(it.facts)h+=it.facts;
   if(it.players&&it.players.length>=5)h+=playersHtml(it.players);
-  h+=`<div class="frame">${shotHtml(it.url)}</div>`;
+  h+=`<div class="frame">${shotHtml(it.preview||it.url,'',it.url)}</div>`;
   $('#dbody').innerHTML=h;$('#dbody').scrollTop=0;wireShots($('#dbody'));wireVpn($('#dbody'));
   $('#drawer').classList.add('on');$('#scrim').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');
   document.body.style.overflow='hidden';
@@ -1195,7 +1199,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.r
 /* warm the preview while the pointer rests on a row */
 const warmed=new Set();
 document.addEventListener('pointerover',e=>{const r=e.target.closest('.row[data-p]');if(!r)return;const it=ITEMS[+r.dataset.p];if(!it||warmed.has(it.url))return;
-  if(!PREVIEWS)return;clearTimeout(r._w);r._w=setTimeout(()=>{warmed.add(it.url);shotBlob(it.url).catch(()=>{})},150)});
+  if(!PREVIEWS)return;clearTimeout(r._w);r._w=setTimeout(()=>{warmed.add(it.url);shotBlob(it.preview||it.url).catch(()=>{})},150)});
 const playersHtml=ps=>{const pos=ps.some(p=>p.pos);return `<div class="plist"><table><thead><tr><th class="n">#</th><th>Player</th>${pos?'<th class="p">Pos</th>':''}<th class="b">Born</th></tr></thead><tbody>${ps.map(p=>`<tr><td class="n">${esc(p.n)}</td><td>${esc(p.name)}</td>${pos?`<td class="p">${esc(p.pos||'')}</td>`:''}<td class="b">${esc(p.born||'')}</td></tr>`).join('')}</tbody></table></div>`};
 
 /* ---------- find ---------- */
@@ -1338,18 +1342,18 @@ function render(r,header){
   /* report section */
   let rep='';
   if(found){
-    const i=item({title:`${found.home} vs ${found.away}`,url:found.url,sub:found.date,facts:''});
-    rep=`<div class="rep"><div class="frame" data-p="${i}">${shotHtml(found.url)}</div><div class="facts">${reportFacts(found)}
+    const i=item({title:`${found.home} vs ${found.away}`,url:found.url,preview:found.game_center,sub:found.date,facts:''});
+    rep=`<div class="rep"><div class="frame" data-p="${i}">${shotHtml(pvOf(found),'',found.url)}</div><div class="facts">${reportFacts(found)}
       <div class="acts"><a class="btn2 pri" href="${esc(found.url)}" target="_blank" rel="noopener">${ic('ext')}Open report</a><button class="btn2" data-copy="${esc(found.url)}">${ic('copy')}Copy link</button></div>${gcHtml(found)}${whyHtml(found)}</div></div>`;
     if(auto.candidates.length>1)rep+=`<div class="mu2 small" style="margin-top:14px">${auto.candidates.length-1} other game${auto.candidates.length>2?'s':''} seen that day, not this one.</div>`;
   }else if(savedLink){
-    const i=item({title:'Saved report',url:savedLink.url,sub:savedLink.note});
-    rep=`<div class="rep"><div class="frame" data-p="${i}">${shotHtml(savedLink.url)}</div><div class="facts"><div><span class="badge ok">${ic('bookmark','xs')}Saved earlier</span></div><div class="mu small">${esc(savedLink.note||'')}</div>
+    const i=item({title:'Saved report',url:savedLink.url,preview:savedLink.game_center,sub:savedLink.note});
+    rep=`<div class="rep"><div class="frame" data-p="${i}">${shotHtml(pvOf(savedLink),'',savedLink.url)}</div><div class="facts"><div><span class="badge ok">${ic('bookmark','xs')}Saved earlier</span></div><div class="mu small">${esc(savedLink.note||'')}</div>
       <div class="acts"><a class="btn2 pri" href="${esc(savedLink.url)}" target="_blank" rel="noopener">${ic('ext')}Open report</a><button class="btn2" data-copy="${esc(savedLink.url)}">${ic('copy')}Copy link</button></div>${gcHtml(savedLink)}</div></div>`;
   }else if(auto.verdict==='check'){
     rep=`<div class="cands">${auto.candidates.map((c,k)=>{
-      const i=item({title:`${c.home} vs ${c.away}`,url:c.url,sub:`${c.date} · ${c.site}`,facts:`<div class="facts">${reportFacts(c)}</div>`});
-      return `<div class="cand" data-k="${k}"><div data-p="${i}">${shotHtml(c.url)}</div><div class="c"><div class="t">${esc(c.home)} <span class="mu2" style="font-weight:400">vs</span> ${esc(c.away)}</div>
+      const i=item({title:`${c.home} vs ${c.away}`,url:c.url,preview:c.game_center,sub:`${c.date} · ${c.site}`,facts:`<div class="facts">${reportFacts(c)}</div>`});
+      return `<div class="cand" data-k="${k}"><div data-p="${i}">${shotHtml(pvOf(c),'',c.url)}</div><div class="c"><div class="t">${esc(c.home)} <span class="mu2" style="font-weight:400">vs</span> ${esc(c.away)}</div>
         <div class="m">${esc(c.when||c.date)}${c.score?' · '+esc(c.score):''} · ${esc(c.site)}${c.league?' · '+esc(c.league):''}</div>${c.via==='index'?`<div><span class="badge ok">${ic('bolt','xs')}Remembered</span></div>`:''}${c.blocked?blockedNote(c,k):confBar(c.confidence)}${vpnNote(c)}
         <div class="acts">${c.kind==='schedule'||!IS_ADMIN?'':`<button class="btn2 pick" data-url="${esc(c.url)}" data-k="${k}" data-ch="${esc(c.ch_id||'')}" data-cid="${esc(c.comp_id||'')}">${ic('check')}This one</button>`}<a class="btn2" href="${esc(c.url)}" target="_blank" rel="noopener">${ic('ext')}${c.kind==='schedule'?'Open schedule':'Open'}</a>${c.game_center?`<a class="btn2 pri" href="${esc(c.game_center)}" target="_blank" rel="noopener">${ic('ext')}Game center</a>`:''}</div></div></div>`}).join('')}</div>`;
   }else{
