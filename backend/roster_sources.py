@@ -390,7 +390,7 @@ import contextvars
 _GS_BROWSER = contextvars.ContextVar("gs_browser", default=False)   # only the analysts' links may use the browser
 
 
-async def gs_json(path: str, ttl: int = TTL):
+async def gs_json(path: str, ttl: int = TTL, browser: bool | None = None):
     t = await get_text(GS + path, ttl=ttl, timeout=12, headers=UA_JSON)
     try:
         d = json.loads(t) if t else None
@@ -404,7 +404,7 @@ async def gs_json(path: str, ttl: int = TTL):
             d = await gamesheet_api._request("GET", GS + path, tries=1)
         except Exception:
             d = None
-    if d is None and _GS_BROWSER.get():
+    if d is None and (_GS_BROWSER.get() if browser is None else browser):
         # last: the server's browser (installed on the office PC for previews) passes GameSheet's
         # security check. Rosters are read after the report search, so searches are not slowed.
         try:
@@ -416,7 +416,8 @@ async def gs_json(path: str, ttl: int = TTL):
 
 
 async def gs_roster(sid: str, tid: str, date: str) -> dict | None:
-    info, ros = await asyncio.gather(gs_json(f"/api/teams/{sid}/{tid}"), gs_json(f"/api/teams/{sid}/{tid}/roster"))
+    # the team's details only help (season dates, division): never worth a browser load
+    info, ros = await asyncio.gather(gs_json(f"/api/teams/{sid}/{tid}", browser=False), gs_json(f"/api/teams/{sid}/{tid}/roster"))
     if not ros:
         return None
     t = ((info or {}).get("data") or [{}])[0] if (info or {}).get("data") else {}
