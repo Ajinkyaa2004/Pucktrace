@@ -39,8 +39,11 @@ def build(path: Path | None = None, log=print) -> dict:
             p = None
         if not p or not p.get("date"):
             continue
+        both = [set(URL.findall(str(r.get(c) or ""))) for c in ("l1", "l2")]
         for col, t in (("l1", "t1"), ("l2", "t2")):
             for u in URL.findall(str(r.get(col) or "")):
+                if u in both[0] and u in both[1]:
+                    continue            # the same link pasted for both teams: whose roster it is, is not known
                 u = u.rstrip(".)")
                 if SHOT.search(u):
                     shots += 1
@@ -50,8 +53,23 @@ def build(path: Path | None = None, log=print) -> dict:
                 hit = next((x for x in lst if x["url"] == u), None)
                 if hit:
                     hit["date"] = max(hit["date"], p["date"])
+                    hit["uses"] += 1
                 else:
-                    lst.append(dict(url=u, date=p["date"], name=p[t]))
+                    lst.append(dict(url=u, date=p["date"], name=p[t], uses=1))
+    # a link filed under several teams belongs to the team it was used for most (a slip in one row
+    # gave another team's page); a tie leaves it with none
+    owners: dict = {}
+    for k, lst in teams.items():
+        for x in lst:
+            owners.setdefault(x["url"], []).append((x["uses"], k))
+    for u, ks in owners.items():
+        if len(ks) > 1:
+            ks.sort(reverse=True)
+            keep = ks[0][1] if ks[0][0] > ks[1][0] else None
+            for _, k in ks:
+                if k != keep:
+                    teams[k] = [x for x in teams[k] if x["url"] != u]
+    teams = {k: v for k, v in teams.items() if v}
     for k, lst in teams.items():
         lst.sort(key=lambda x: x["date"], reverse=True)
         del lst[KEEP:]
