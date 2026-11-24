@@ -400,6 +400,14 @@ async def gs_json(path: str, ttl: int = TTL):
             d = await gamesheet_api._request("GET", GS + path, tries=2)
         except Exception:
             d = None
+    if d is None:
+        # last: the server's browser (installed on the office PC for previews) passes GameSheet's
+        # security check. Rosters are read after the report search, so searches are not slowed.
+        try:
+            t = await browser_page(GS + path, wait_ms=2500, ttl=ttl, js="() => document.body.innerText", retries=0, light_ok=True)
+            d = json.loads(t) if t and t.lstrip().startswith(("{", "[")) else None
+        except Exception:
+            d = None
     return d
 
 
