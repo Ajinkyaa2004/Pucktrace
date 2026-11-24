@@ -16,11 +16,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FILE = ROOT / "data" / "roster_links.json"
+IMAGE_HOSTS = re.compile(r"prnt\.sc|prntscr\.com|skrinshoter|ibb\.co|imgur\.com|lightshot|gyazo|snipboard", re.I)
 SHOT = re.compile(r"prnt\.sc|skrinshoter|ibb\.co|imgur\.com|lightshot|gyazo|snipboard|drive\.google|docs\.google|"
                   r"dropbox|wetransfer|\.png\b|\.jpe?g\b", re.I)
 URL = re.compile(r"https?://[^\s,;\"'<>]+")
 KEEP = 3                      # links per team, newest first
-VERSION = 3                   # raise when build() changes: servers rebuild the file at startup
+VERSION = 4                   # raise when build() changes: servers rebuild the file at startup
 _cache: dict = {"mtime": None, "teams": {}}
 
 
@@ -38,6 +39,7 @@ def build(path: Path | None = None, log=print) -> dict:
     """Read the Progress sheet and return {team key: [links, newest first]}."""
     from . import sheet, lookup
     teams: dict = {}
+    shot_teams: dict = {}
     n = shots = 0
     for r in sheet.rows(path or sheet.PROGRESS):
         try:
@@ -54,6 +56,11 @@ def build(path: Path | None = None, log=print) -> dict:
                     continue            # the same link pasted for both teams: whose roster it is, is not known
                 if SHOT.search(u):
                     shots += 1
+                    if IMAGE_HOSTS.search(u):
+                        # a roster screenshot: not readable as a page, but the tagger can open it
+                        sl = shot_teams.setdefault(key(p[t]), [])
+                        if u not in [x["url"] for x in sl]:
+                            sl.append(dict(url=u, date=p["date"], name=p[t]))
                     continue
                 n += 1
                 lst = teams.setdefault(key(p[t]), [])
@@ -80,8 +87,11 @@ def build(path: Path | None = None, log=print) -> dict:
     for k, lst in teams.items():
         lst.sort(key=lambda x: x["date"], reverse=True)
         del lst[KEEP:]
-    log(f"roster links: {n} links for {len(teams)} teams ({shots} screenshots left out)")
-    return dict(v=VERSION, built=datetime.datetime.now().isoformat(timespec="seconds"), teams=teams)
+    for k, lst in shot_teams.items():
+        lst.sort(key=lambda x: x["date"], reverse=True)
+        del lst[2:]
+    log(f"roster links: {n} links for {len(teams)} teams; {shots} screenshots ({len(shot_teams)} teams) kept to open")
+    return dict(v=VERSION, built=datetime.datetime.now().isoformat(timespec="seconds"), teams=teams, shots=shot_teams)
 
 
 def save(data: dict) -> None:
@@ -96,10 +106,20 @@ def links(team_name: str, date: str | None = None) -> list[dict]:
     try:
         m = FILE.stat().st_mtime
         if m != _cache["mtime"]:
-            _cache.update(mtime=m, teams=json.loads(FILE.read_text(encoding="utf-8")).get("teams") or {})
+            d = json.loads(FILE.read_text(encoding="utf-8"))
+            _cache.update(mtime=m, teams=d.get("teams") or {}, shots=d.get("shots") or {})
     except Exception:
         return []
-    lst = _cache["teams"].get(key(team_name)) or []
+    return _season(_cache["teams"].get(key(team_name)) or [], date)
+
+
+def screenshots(team_name: str, date: str | None = None) -> list[dict]:
+    """The analysts' roster screenshots for this team this season, newest first (at most 2)."""
+    links(team_name, date)                  # loads the file
+    return _season(_cache.get("shots", {}).get(key(team_name)) or [], date)
+
+
+def _season(lst: list, date: str | None) -> list:
     if date:
         d = datetime.date.fromisoformat(date)
         start = f"{d.year if d.month >= 7 else d.year - 1}-07-01"

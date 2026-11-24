@@ -22,7 +22,8 @@ tmp.write_text(json.dumps({"teams": {
     "buffalo jr sabres 16u aaa": [
         {"url": "https://gamesheetstats.com/seasons/15483/teams/556677/roster", "date": "2026-11-20", "name": "Buffalo Jr. Sabres 16U AAA"},
         {"url": "https://www.eliteprospects.com/team/42154/buffalo-jr-sabres-16u-aaa", "date": "2026-02-01", "name": "x"}],
-    "waterloo ravens u18aa": [{"url": "https://www.thehockeyobserver.com/waterloo-ravens-u18aa/", "date": "2026-10-04", "name": "x"}]}}))
+    "waterloo ravens u18aa": [{"url": "https://www.thehockeyobserver.com/waterloo-ravens-u18aa/", "date": "2026-10-04", "name": "x"}]},
+    "shots": {"belfast giants": [{"url": "https://prnt.sc/-1r3yKJk6qcc", "date": "2026-11-20", "name": "Belfast Giants"}]}}))
 
 check("the same team written another way finds its links", len(L.links("Buffalo Jr Sabres 16U AAA", "2026-11-22")) == 1)
 check("last season's link is not offered", all(x["date"] >= "2026-07-01" for x in L.links("Buffalo Jr. Sabres 16U AAA", "2026-11-22")))
@@ -53,6 +54,11 @@ out = asyncio.run(S.from_sheet_links("Waterloo Ravens U18AA", "2026-11-22"))
 check("a club page without a season counts as this season's (an analyst used it this season)",
       out and out[0]["season"] == "2026-27" and out[0]["season_shown"] is False, str(out))
 check("it says where the link came from", out and "analysts used on 2026-10-04" in out[0]["note"], str(out and out[0]["note"]))
+
+out = asyncio.run(S.from_sheet_links("Belfast Giants", "2026-11-22"))
+check("a team with only a roster screenshot gets it, to open", out and out[0]["source"] == "Roster screenshot"
+      and out[0]["url"] == "https://prnt.sc/-1r3yKJk6qcc" and "saved on 2026-11-20" in out[0]["note"], str(out))
+check("last season's screenshot is not offered", asyncio.run(S.from_sheet_links("Belfast Giants", "2027-09-01")) == [])
 
 print("\nALL PASS" if not failures else f"\n{len(failures)} FAILED")
 sys.exit(1 if failures else 0)

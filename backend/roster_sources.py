@@ -1031,8 +1031,12 @@ async def from_sheet_links(team_name: str, date: str) -> list[dict]:
     """The roster links analysts used for this team this season (RTT sheet), newest first."""
     from . import roster_links
     lst = roster_links.links(team_name, date)
+    shots = [dict(url=x["url"], source="Roster screenshot", season=season_label(season_start(date)), players=[], team=None, league="",
+                  status="blocked", match=1.0, by="id", sheet_link=x["url"], age_fit="unknown",
+                  note=f"roster screenshot analysts saved on {x['date']}: open it to see the players")
+             for x in roster_links.screenshots(team_name, date)]
     if not lst:
-        return []
+        return shots
     async def capped(u):
         # at most 20 s: the other sources answer meanwhile, and the 30 s roster budget is never
         # used up by a slow page (an unread link is still listed, to open)
@@ -1055,7 +1059,7 @@ async def from_sheet_links(team_name: str, date: str) -> list[dict]:
         r.update(match=1.0, by="id", sheet_link=x["url"])
         r["note"] += f" (roster link analysts used on {x['date']})"
         out.append(r)
-    return out
+    return out + shots
 
 
 # ---------------------------------------------------------------- entry point
