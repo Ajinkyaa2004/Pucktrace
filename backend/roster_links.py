@@ -20,6 +20,7 @@ SHOT = re.compile(r"prnt\.sc|skrinshoter|ibb\.co|imgur\.com|lightshot|gyazo|snip
                   r"dropbox|wetransfer|\.png\b|\.jpe?g\b", re.I)
 URL = re.compile(r"https?://[^\s,;\"'<>]+")
 KEEP = 3                      # links per team, newest first
+VERSION = 2                   # raise when build() changes: servers rebuild the file at startup
 _cache: dict = {"mtime": None, "teams": {}}
 
 
@@ -74,7 +75,7 @@ def build(path: Path | None = None, log=print) -> dict:
         lst.sort(key=lambda x: x["date"], reverse=True)
         del lst[KEEP:]
     log(f"roster links: {n} links for {len(teams)} teams ({shots} screenshots left out)")
-    return dict(built=datetime.datetime.now().isoformat(timespec="seconds"), teams=teams)
+    return dict(v=VERSION, built=datetime.datetime.now().isoformat(timespec="seconds"), teams=teams)
 
 
 def save(data: dict) -> None:
@@ -99,3 +100,11 @@ def links(team_name: str, date: str | None = None) -> list[dict]:
         end = f"{int(start[:4]) + 1}-07-01"
         lst = [x for x in lst if start <= x["date"] < end]
     return lst
+
+
+def stale() -> bool:
+    """True when the file is missing or was built by an older build()."""
+    try:
+        return json.loads(FILE.read_text(encoding="utf-8")).get("v") != VERSION
+    except Exception:
+        return True

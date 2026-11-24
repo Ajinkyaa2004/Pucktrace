@@ -1526,7 +1526,7 @@ async def _start_harvest():
     try:
         from . import roster_links
         sheet_file = ROOT / "data" / "progress.xlsx"
-        if sheet_file.exists() and (not roster_links.FILE.exists() or roster_links.FILE.stat().st_mtime < sheet_file.stat().st_mtime):
+        if sheet_file.exists() and (roster_links.stale() or roster_links.FILE.stat().st_mtime < sheet_file.stat().st_mtime):
             import threading
 
             def _build_links():
