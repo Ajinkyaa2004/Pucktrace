@@ -798,7 +798,7 @@ def healthz():
     return dict(ok=True, server=SERVER, server_label=SERVER_LABEL, game_list=gl.get("games", 0), game_list_at=gl.get("at"), game_list_from=gl.get("source"), knowledge_base=len(KB.get("teams") or {}) > 0,
                 version=(_os.environ.get("APP_VERSION") or _os.environ.get("RENDER_GIT_COMMIT", ""))[:7] or None,
                 kb_teams=len(KB.get("teams") or {}), uptime_s=int(_time.time() - _STARTED), rss_mb=_rss_mb(),
-                searches=sum(1 for v in _JOBS.values() if v["status"] == "running"), max_searches=_max_searches(), previews=SHOTS["state"],
+                searches=sum(1 for v in _JOBS.values() if v["status"] == "running"), max_searches=_max_searches(), previews=SHOTS["state"], roster_links=_roster_links_stats(),
                 game_list_error=gl.get("error"), sync=SYNC, backup_key=bool(_os.environ.get("KB_KEY")))
 
 
@@ -1509,6 +1509,14 @@ def _install_preview_browser():
     except Exception as e:
         SHOTS.update(ready=False, state=f"install failed: {e}")
     print(f"[previews] {SHOTS['state']}", flush=True)
+
+
+def _roster_links_stats() -> dict:
+    try:
+        from . import roster_links
+        return roster_links.stats()
+    except Exception as e:
+        return dict(error=str(e)[:80])
 
 
 def _previews_on() -> bool:

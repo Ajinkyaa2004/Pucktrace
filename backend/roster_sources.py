@@ -1024,6 +1024,12 @@ async def from_sheet_links(team_name: str, date: str) -> list[dict]:
     out = []
     for x, r in zip(lst, res):
         if not isinstance(r, dict) or not r.get("players"):
+            # the page could not be read here (a security check, a page built by script): the link the
+            # analysts used is still given, to open in the browser
+            why = f"{type(r).__name__}: {r}"[:80] if isinstance(r, Exception) else "players not readable here"
+            out.append(dict(url=x["url"], source="Roster link on file", season=cur, players=[], team=None, league="",
+                            status="blocked", match=1.0, by="id", sheet_link=x["url"], age_fit="unknown",
+                            note=f"roster link analysts used on {x['date']}: open it ({why})"))
             continue
         if not r.get("season"):
             r["season"] = cur          # used by an analyst this season; the page shows no season of its own
@@ -1063,6 +1069,7 @@ async def find_rosters(team_name: str, date: str, hints: dict | None = None) -> 
     for r in res:
         if isinstance(r, list):
             out += [finish(x, team_name, date) for x in r if x.get("players")]   # an empty roster is no source
+            out += [x for x in r if not x.get("players") and x.get("sheet_link")]   # the analysts' link, to open
     cross_check(out)
     if hints.get("fallback", True) and not any(x["status"] == "verified" for x in out):
         jobs2 = [from_pages(team_name, date, team), from_team_site(team_name, date, team, allow_search=hints.get("search", True))]

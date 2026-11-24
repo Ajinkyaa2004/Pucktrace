@@ -114,3 +114,11 @@ def stale() -> bool:
         return json.loads(FILE.read_text(encoding="utf-8")).get("v") != VERSION
     except Exception:
         return True
+
+
+def stats() -> dict:
+    try:
+        d = json.loads(FILE.read_text(encoding="utf-8"))
+        return dict(teams=len(d.get("teams") or {}), built=d.get("built"), v=d.get("v"))
+    except Exception as e:
+        return dict(teams=0, error=str(e)[:80])
