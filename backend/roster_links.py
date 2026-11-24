@@ -20,8 +20,14 @@ SHOT = re.compile(r"prnt\.sc|skrinshoter|ibb\.co|imgur\.com|lightshot|gyazo|snip
                   r"dropbox|wetransfer|\.png\b|\.jpe?g\b", re.I)
 URL = re.compile(r"https?://[^\s,;\"'<>]+")
 KEEP = 3                      # links per team, newest first
-VERSION = 2                   # raise when build() changes: servers rebuild the file at startup
+VERSION = 3                   # raise when build() changes: servers rebuild the file at startup
 _cache: dict = {"mtime": None, "teams": {}}
+
+
+def _url(u: str) -> str:
+    """A link as filed: no final '.', ')' or '/' (the same page written two ways is one link)."""
+    u = u.rstrip(".)")
+    return u.rstrip("/") if u.count("/") > 3 else u
 
 
 def key(name: str) -> str:
@@ -40,18 +46,18 @@ def build(path: Path | None = None, log=print) -> dict:
             p = None
         if not p or not p.get("date"):
             continue
-        both = [set(URL.findall(str(r.get(c) or ""))) for c in ("l1", "l2")]
+        both = [{_url(u) for u in URL.findall(str(r.get(c) or ""))} for c in ("l1", "l2")]
         for col, t in (("l1", "t1"), ("l2", "t2")):
             for u in URL.findall(str(r.get(col) or "")):
+                u = _url(u)
                 if u in both[0] and u in both[1]:
                     continue            # the same link pasted for both teams: whose roster it is, is not known
-                u = u.rstrip(".)")
                 if SHOT.search(u):
                     shots += 1
                     continue
                 n += 1
                 lst = teams.setdefault(key(p[t]), [])
-                hit = next((x for x in lst if x["url"] == u), None)
+                hit = next((x for x in lst if x["url"].rstrip("/") == u.rstrip("/")), None)   # with or without a final /
                 if hit:
                     hit["date"] = max(hit["date"], p["date"])
                     hit["uses"] += 1

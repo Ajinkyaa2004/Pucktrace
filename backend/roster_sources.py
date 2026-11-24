@@ -389,9 +389,18 @@ def gs_index() -> dict:
 async def gs_json(path: str, ttl: int = TTL):
     t = await get_text(GS + path, ttl=ttl, timeout=30, headers=UA_JSON)
     try:
-        return json.loads(t) if t else None
+        d = json.loads(t) if t else None
     except ValueError:
-        return None       # an HTML challenge page instead of JSON
+        d = None          # an HTML challenge page instead of JSON
+    if d is None:
+        # the GameSheet reader's own client (browser User-Agent, paced, retried): plain requests from
+        # the office PC are refused where it is answered (rosters on analysts' GameSheet links, 24 Nov)
+        try:
+            from . import gamesheet_api
+            d = await gamesheet_api._request("GET", GS + path, tries=2)
+        except Exception:
+            d = None
+    return d
 
 
 async def gs_roster(sid: str, tid: str, date: str) -> dict | None:
@@ -1078,8 +1087,9 @@ async def find_rosters(team_name: str, date: str, hints: dict | None = None) -> 
         cross_check(out)
     seen, uniq = set(), []
     for x in sorted(out, key=rank):
-        if x["url"] not in seen:
-            seen.add(x["url"])
+        k = (x.get("url") or "").rstrip("/").split("#")[0]
+        if k not in seen:
+            seen.add(k)
             uniq.append(x)
     return uniq
 
