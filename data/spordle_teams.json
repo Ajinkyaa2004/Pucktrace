@@ -1,0 +1,494 @@
+{
+"abbotsford hawks u15 a1": {
+"games": 2,
+"last": "2026-11-22",
+"org": null
+},
+"abbotsford hawks u18 a1": {
+"games": 1,
+"last": "2026-11-09",
+"org": null
+},
+"academie sainte therese m13 d1": {
+"games": 1,
+"last": "2026-11-06",
+"org": null
+},
+"academie st louis m15 d1": {
+"games": 1,
+"last": "2025-10-31",
+"org": null
+},
+"ajax pickering raiders u18 aaa": {
+"games": 2,
+"last": "2026-11-08",
+"org": null
+},
+"blizzard ssf m13 aaa": {
+"games": 1,
+"last": "2026-11-13",
+"org": null
+},
+"bois francs cascades m15 aaa e": {
+"games": 2,
+"last": "2026-10-17",
+"org": null
+},
+"central okanagan zone jr rockets u15 a": {
+"games": 1,
+"last": "2026-10-11",
+"org": "capital-region-female-mha",
+"org_date": "2026-10-11"
+},
+"central okanagan zone jr rockets u18 a": {
+"games": 1,
+"last": "2026-10-25",
+"org": null
+},
+"central ontario wolves u18 aaa": {
+"games": 2,
+"last": "2026-11-07",
+"org": null
+},
+"chilliwack bruins u15 a1": {
+"games": 1,
+"last": "2026-10-26",
+"org": null
+},
+"college bourget m15 d1 releve": {
+"games": 1,
+"last": "2026-10-24",
+"org": null
+},
+"college bourget m15 d1 rseq": {
+"games": 1,
+"last": "2025-10-31",
+"org": null
+},
+"college bourget m15 d1r": {
+"games": 2,
+"last": "2026-10-17",
+"org": null
+},
+"college bourget voltigeurs m18 d1": {
+"games": 2,
+"last": "2026-11-06",
+"org": null
+},
+"college de levis m18 d1": {
+"games": 3,
+"last": "2026-11-13",
+"org": null
+},
+"college de montreal m15 d1 releve": {
+"games": 1,
+"last": "2026-10-24",
+"org": null
+},
+"college jean de brebeuf m15 d1 r": {
+"games": 1,
+"last": "2026-10-09",
+"org": null
+},
+"college notre dame m15 r": {
+"games": 1,
+"last": "2026-10-17",
+"org": null
+},
+"college st bernard m15 d1 r": {
+"games": 1,
+"last": "2026-10-03",
+"org": null
+},
+"college st bernard m18 d1 r": {
+"games": 1,
+"last": "2026-10-23",
+"org": null
+},
+"dawson college blues": {
+"games": 1,
+"last": "2026-02-09",
+"org": "tournoi-international-feminin-de-quebec",
+"org_date": "2026-02-09"
+},
+"delta hockey academy u15 aa": {
+"games": 1,
+"last": "2026-10-18",
+"org": "pacific-coast-elite-hockey-league-u15-female",
+"org_date": "2026-10-18"
+},
+"e s du mont ste anne m18 d1": {
+"games": 1,
+"last": "2026-10-04",
+"org": null
+},
+"e sec de mortagne m15 d1": {
+"games": 1,
+"last": "2026-11-05",
+"org": null
+},
+"e sec de mortagne m18 d1": {
+"games": 1,
+"last": "2026-11-06",
+"org": null
+},
+"eastern ontario wild u18 aaa": {
+"games": 3,
+"last": "2026-11-07",
+"org": "big-nickel-major-aaa-hockey-tournament",
+"org_date": "2026-11-07"
+},
+"ecole cardinal roy m18 d1": {
+"games": 1,
+"last": "2026-11-13",
+"org": null
+},
+"ecole du rocher m15 d1 r": {
+"games": 1,
+"last": "2026-10-03",
+"org": null
+},
+"ecole fadette vert et noir m13 eliete": {
+"games": 1,
+"last": "2026-11-13",
+"org": null
+},
+"ecole fadette vert et noir m15 e": {
+"games": 1,
+"last": "2026-10-04",
+"org": null
+},
+"ecole fadette vert noir m18 d1": {
+"games": 1,
+"last": "2026-10-21",
+"org": null
+},
+"ecole paul hubert m18 d1": {
+"games": 1,
+"last": "2026-10-10",
+"org": null
+},
+"edza east beavers u13 aaa": {
+"games": 2,
+"last": "2026-11-22",
+"org": "new-brunswick-aaa-hockey-league",
+"org_date": "2026-11-22"
+},
+"edza south cougars u13 aaa": {
+"games": 1,
+"last": "2026-11-22",
+"org": "new-brunswick-aaa-hockey-league",
+"org_date": "2026-11-22"
+},
+"elgin middlesex canucks u18 aaa": {
+"games": 1,
+"last": "2026-11-07",
+"org": null
+},
+"fraser valley apex pcehl u13": {
+"games": 1,
+"last": "2026-10-24",
+"org": null
+},
+"fredericton caps u13": {
+"games": 1,
+"last": "2026-11-21",
+"org": "new-brunswick-aaa-hockey-league",
+"org_date": "2026-11-21"
+},
+"grenadiers lac st louis m13 aaa elite": {
+"games": 1,
+"last": "2026-11-21",
+"org": null
+},
+"harfangs sherbrooke m13 elites": {
+"games": 1,
+"last": "2026-11-21",
+"org": null
+},
+"harfangs sherbrooke m15 elites": {
+"games": 1,
+"last": "2026-09-27",
+"org": null
+},
+"harfangs triolet m15 d1": {
+"games": 1,
+"last": "2026-11-17",
+"org": null
+},
+"jdf grizzlies u18 t1": {
+"games": 1,
+"last": "2026-10-18",
+"org": null
+},
+"juan de fuca grizzlies u13 t1": {
+"games": 1,
+"last": "2026-10-04",
+"org": "viaha-island-league",
+"org_date": "2026-10-04"
+},
+"juan de fuca grizzlies u15 t1": {
+"games": 1,
+"last": "2026-11-21",
+"org": null
+},
+"nanaimo clippers u13 a1": {
+"games": 2,
+"last": "2026-10-17",
+"org": "comox-valley-minor-hockey-association",
+"org_date": "2026-10-17"
+},
+"nanaimo clippers u15 a1": {
+"games": 1,
+"last": "2026-09-19",
+"org": null
+},
+"nanaimo clippers u18 tier 1": {
+"games": 1,
+"last": "2026-10-03",
+"org": null
+},
+"nanaimo clippers u18 tier 2": {
+"games": 1,
+"last": "2026-10-19",
+"org": null
+},
+"niagara north stars u18 aaa": {
+"games": 1,
+"last": "2026-11-06",
+"org": null
+},
+"north island bears u13": {
+"games": 6,
+"last": "2026-10-25",
+"org": "comox-valley-minor-hockey-association",
+"org_date": "2026-10-17"
+},
+"north island bears u15": {
+"games": 6,
+"last": "2026-11-21",
+"org": null
+},
+"north island bears u18 tier 1": {
+"games": 7,
+"last": "2026-10-19",
+"org": null
+},
+"north shore avalanche u18 a1": {
+"games": 2,
+"last": "2026-11-08",
+"org": "pcaha-female",
+"org_date": "2026-10-12"
+},
+"north shore whitecaps u18 aaa": {
+"games": 1,
+"last": "2026-11-06",
+"org": "big-nickel-major-aaa-hockey-tournament",
+"org_date": "2026-11-06"
+},
+"north shore winter club 13u": {
+"games": 1,
+"last": "2026-10-25",
+"org": null
+},
+"north valley surge 15u aa": {
+"games": 3,
+"last": "2026-09-27",
+"org": "pacific-coast-elite-hockey-league-u15-female",
+"org_date": "2026-09-27"
+},
+"oha mavericks varsity u22 aa": {
+"games": 1,
+"last": "2026-02-09",
+"org": "tournoi-international-feminin-de-quebec",
+"org_date": "2026-02-09"
+},
+"omaha central zone u18 aa": {
+"games": 1,
+"last": "2026-10-10",
+"org": null
+},
+"omaha south zone u18 aa": {
+"games": 1,
+"last": "2026-11-09",
+"org": null
+},
+"ottawa myers automotive u18 aaa": {
+"games": 1,
+"last": "2026-11-06",
+"org": null
+},
+"peninsula mha u18 a2": {
+"games": 1,
+"last": "2026-10-05",
+"org": null
+},
+"peterborough petes u18 aaa": {
+"games": 1,
+"last": "2026-11-07",
+"org": null
+},
+"polyvalente marcel landry m18 d1": {
+"games": 2,
+"last": "2026-10-21",
+"org": null
+},
+"powell river kings u18 aa": {
+"games": 1,
+"last": "2026-09-12",
+"org": null
+},
+"powell river u15 a": {
+"games": 1,
+"last": "2026-09-26",
+"org": null
+},
+"prince george capitals u18 a": {
+"games": 1,
+"last": "2026-10-24",
+"org": null
+},
+"richmond jets u18 a1": {
+"games": 1,
+"last": "2026-10-12",
+"org": null
+},
+"richmond ravens u18 a1": {
+"games": 1,
+"last": "2026-11-09",
+"org": null
+},
+"ridge meadows rustlers u15 a2": {
+"games": 1,
+"last": "2026-11-22",
+"org": null
+},
+"rive sud coll francais m15 aaae": {
+"games": 4,
+"last": "2026-10-17",
+"org": null
+},
+"seattle jr kraken 14u aaa": {
+"games": 1,
+"last": "2026-10-25",
+"org": null
+},
+"seattle red hawks u15 elite aa": {
+"games": 1,
+"last": "2026-08-06",
+"org": "pacific-coast-elite-hockey-league",
+"org_date": "2026-08-06"
+},
+"seattle red hawks u16 aa": {
+"games": 7,
+"last": "2026-11-18",
+"org": "pcaha-female",
+"org_date": "2026-10-09"
+},
+"seattle red hawks u19 aa": {
+"games": 6,
+"last": "2026-11-15",
+"org": "pcaha-female",
+"org_date": "2026-10-12"
+},
+"selwyn house m13 d1": {
+"games": 1,
+"last": "2026-11-06",
+"org": null
+},
+"selwyn house m15 d1": {
+"games": 2,
+"last": "2026-11-17",
+"org": null
+},
+"soo greyhounds u18 aaa": {
+"games": 2,
+"last": "2026-11-07",
+"org": "big-nickel-major-aaa-hockey-tournament",
+"org_date": "2026-11-07"
+},
+"south valley havoc u15aa": {
+"games": 3,
+"last": "2026-10-18",
+"org": "pacific-coast-elite-hockey-league-u15-female",
+"org_date": "2026-10-18"
+},
+"st patrick s high school m18 d1 r": {
+"games": 1,
+"last": "2026-10-23",
+"org": null
+},
+"sudbury wolves 13u aaa": {
+"games": 1,
+"last": "2026-11-15",
+"org": null
+},
+"surrey falcons u18 a1": {
+"games": 1,
+"last": "2026-10-03",
+"org": null
+},
+"surrey thunder u15 a1": {
+"games": 1,
+"last": "2026-11-08",
+"org": null
+},
+"thunder bay kings u13 aaa": {
+"games": 3,
+"last": "2026-11-15",
+"org": null
+},
+"thunder bay kings u16 aaa": {
+"games": 1,
+"last": "2026-10-22",
+"org": "thunder-bay-minor-hockey-association",
+"org_date": "2026-10-22"
+},
+"thunder bay queens u15 aa": {
+"games": 1,
+"last": "2026-10-04",
+"org": null
+},
+"tri cities predators u18 a1": {
+"games": 3,
+"last": "2026-11-18",
+"org": null
+},
+"upper canada cyclones u18 aaa": {
+"games": 1,
+"last": "2026-11-06",
+"org": null
+},
+"vancouver thunderbirds u15 a1": {
+"games": 1,
+"last": "2026-10-24",
+"org": null
+},
+"victoria racquet club mha 1 u13 tier 1 kings": {
+"games": 1,
+"last": "2026-09-20",
+"org": null
+},
+"victoria reign u15 aa": {
+"games": 1,
+"last": "2026-10-11",
+"org": "capital-region-female-mha",
+"org_date": "2026-10-11"
+},
+"volunteer pool bearcats u18 aa": {
+"games": 1,
+"last": "2026-10-22",
+"org": "thunder-bay-minor-hockey-association",
+"org_date": "2026-10-22"
+},
+"westfort maroons u15 aa": {
+"games": 1,
+"last": "2026-10-09",
+"org": null
+},
+"york simcoe express u18 aaa": {
+"games": 1,
+"last": "2026-11-08",
+"org": null
+}
+}

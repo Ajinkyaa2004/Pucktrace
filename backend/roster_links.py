@@ -160,7 +160,7 @@ def spordle(team_name: str) -> dict | None:
     """{org: association page name or None, games, last} when the analysts found this team's games
     on Spordle (page.spordle.com / pdf.play.spordle.com)."""
     links(team_name)                        # loads the file
-    sp = _cache.get("spordle") or {}
+    sp = _cache.get("spordle") or _spordle_seed()
     e = sp.get(key(team_name))
     if not e or e.get("org"):
         return e
@@ -177,3 +177,18 @@ def spordle(team_name: str) -> dict | None:
                     best = (n, org)
                 break
     return dict(e, org=best[1], org_from="name") if best else e
+
+
+SEED = Path(__file__).resolve().parent.parent / "data" / "spordle_teams.json"
+_seed: dict = {}
+
+
+def _spordle_seed() -> dict:
+    """The same table kept in git (data/spordle_teams.json), for a server whose roster_links.json
+    was built before the Spordle teams were learned (rebuilt at the next sheet Apply)."""
+    if not _seed:
+        try:
+            _seed.update(json.loads(SEED.read_text(encoding="utf-8")))
+        except Exception:
+            _seed["_none"] = {}
+    return _seed
