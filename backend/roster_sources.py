@@ -386,8 +386,12 @@ def gs_index() -> dict:
     return _gs_index
 
 
+import contextvars
+_GS_BROWSER = contextvars.ContextVar("gs_browser", default=False)   # only the analysts' links may use the browser
+
+
 async def gs_json(path: str, ttl: int = TTL):
-    t = await get_text(GS + path, ttl=ttl, timeout=30, headers=UA_JSON)
+    t = await get_text(GS + path, ttl=ttl, timeout=12, headers=UA_JSON)
     try:
         d = json.loads(t) if t else None
     except ValueError:
@@ -397,10 +401,10 @@ async def gs_json(path: str, ttl: int = TTL):
         # the office PC are refused where it is answered (rosters on analysts' GameSheet links, 24 Nov)
         try:
             from . import gamesheet_api
-            d = await gamesheet_api._request("GET", GS + path, tries=2)
+            d = await gamesheet_api._request("GET", GS + path, tries=1)
         except Exception:
             d = None
-    if d is None:
+    if d is None and _GS_BROWSER.get():
         # last: the server's browser (installed on the office PC for previews) passes GameSheet's
         # security check. Rosters are read after the report search, so searches are not slowed.
         try:
@@ -1002,6 +1006,7 @@ async def _read_link(url: str, date: str) -> dict | None:
     """One analyst roster link read with the reader that fits its site."""
     m = GS_TEAM_LINK.search(url)
     if m:
+        _GS_BROWSER.set(True)          # this task only: GameSheet may be read in the browser
         return await gs_roster(m.group(1), m.group(2), date)
     m = EP_TEAM.search(url)
     if m:
@@ -1027,7 +1032,11 @@ async def from_sheet_links(team_name: str, date: str) -> list[dict]:
     lst = roster_links.links(team_name, date)
     if not lst:
         return []
-    res = await asyncio.gather(*[_read_link(x["url"], date) for x in lst], return_exceptions=True)
+    async def capped(u):
+        # at most 20 s: the other sources answer meanwhile, and the 30 s roster budget is never
+        # used up by a slow page (an unread link is still listed, to open)
+        return await asyncio.wait_for(_read_link(u, date), timeout=20)
+    res = await asyncio.gather(*[capped(x["url"]) for x in lst], return_exceptions=True)
     cur = season_label(season_start(date))
     out = []
     for x, r in zip(lst, res):
