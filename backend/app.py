@@ -532,6 +532,7 @@ async def admin_sheet_apply(inp: SheetApplyIn):
                 _learn_log(f"roster links: {e}")
             for f in ("knowledge.json", "aliases_learned.json", "roster_links.json"):
                 _push_file(f)
+            asyncio.ensure_future(_harvest_rosters(delay=30))     # the new sheet's roster links, read ahead
             _learn_log("knowledge and spellings in use here, and sent to the other server")
             if inp.accuracy:
                 rows = await asyncio.to_thread(lambda: sheet_report.verdicts(sheet_report.log_rows()))
@@ -568,7 +569,7 @@ def session(request: Request):
 # private data files the servers receive by upload and keep in step with each other; the GameSheet
 # team list lets the roster lookup find GameSheet teams whose game wasn't found
 DATA_FILES = ("knowledge.json", "aliases_learned.json", "sheet_log.json", "gamesheet_teams.json", "users.json", "announce.json",
-              "roster_links.json")
+              "roster_links.json", "roster_store.json")
 
 
 @app.post("/api/admin/upload")
@@ -798,7 +799,7 @@ def healthz():
     return dict(ok=True, server=SERVER, server_label=SERVER_LABEL, game_list=gl.get("games", 0), game_list_at=gl.get("at"), game_list_from=gl.get("source"), knowledge_base=len(KB.get("teams") or {}) > 0,
                 version=(_os.environ.get("APP_VERSION") or _os.environ.get("RENDER_GIT_COMMIT", ""))[:7] or None,
                 kb_teams=len(KB.get("teams") or {}), uptime_s=int(_time.time() - _STARTED), rss_mb=_rss_mb(),
-                searches=sum(1 for v in _JOBS.values() if v["status"] == "running"), max_searches=_max_searches(), previews=SHOTS["state"], roster_links=_roster_links_stats(),
+                searches=sum(1 for v in _JOBS.values() if v["status"] == "running"), max_searches=_max_searches(), previews=SHOTS["state"], roster_links=_roster_links_stats(), roster_store=_roster_store_stats(),
                 game_list_error=gl.get("error"), sync=SYNC, backup_key=bool(_os.environ.get("KB_KEY")))
 
 
@@ -1519,6 +1520,37 @@ def _roster_links_stats() -> dict:
         return dict(error=str(e)[:80])
 
 
+def _roster_store_stats() -> dict:
+    try:
+        from . import roster_store
+        return roster_store.stats()
+    except Exception as e:
+        return dict(error=str(e)[:80])
+
+
+async def _harvest_rosters(delay: float = 0):
+    """Read every team's roster links of this season into the roster store (office PC only: it has
+    the browser GameSheet needs), searches first; then send the store to the other server."""
+    import asyncio as _a
+    if SERVER == "render":
+        return
+    await _a.sleep(delay)
+    try:
+        from . import roster_store
+        await roster_store.harvest(busy=app_busy)
+        _push_file("roster_store.json")
+    except Exception as e:
+        print("[roster store]", e, flush=True)
+
+
+async def _harvest_daily():
+    import asyncio as _a
+    await _harvest_rosters(delay=180)              # after startup (the links file is built first)
+    while True:
+        await _a.sleep(24 * 3600)
+        await _harvest_rosters()
+
+
 def _previews_on() -> bool:
     from .roster_pages import LIGHT
     return (not LIGHT) or SHOTS["ready"]
@@ -1546,6 +1578,7 @@ async def _start_harvest():
             threading.Thread(target=_build_links, daemon=True).start()
     except Exception as e:
         print("[roster links]", e, flush=True)
+    asyncio.ensure_future(_harvest_daily())
     if LIGHT and _os.environ.get("PREVIEWS", "1" if _os.name == "nt" else "0") == "1":
         import threading
         threading.Thread(target=_install_preview_browser, daemon=True).start()

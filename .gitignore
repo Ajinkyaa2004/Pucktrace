@@ -44,3 +44,4 @@ AGENTS.md
 data/*.tmp
 data/sheet_queue.json
 data/roster_links.json
+data/roster_store.json

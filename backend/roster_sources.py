@@ -1035,6 +1035,14 @@ async def from_sheet_links(team_name: str, date: str) -> list[dict]:
                   status="blocked", match=1.0, by="id", sheet_link=x["url"], age_fit="unknown",
                   note=f"roster screenshot analysts saved on {x['date']}: open it to see the players")
              for x in roster_links.screenshots(team_name, date)]
+    from . import roster_store
+    st = roster_store.get(team_name, date)
+    if st:
+        # read ahead of time on the office PC from this link: answered at once
+        r = dict(url=st["url"], source=st.get("source") or "Roster link on file", season=st["season"], players=st["players"],
+                 team=None, league="", match=1.0, by="id", sheet_link=st.get("link") or st["url"], stored=True,
+                 note=f"{(st.get('note') or 'roster').split(' (')[0]} (roster link analysts used on {st.get('used')}, read {st['read'][:10]})")
+        return [r] + shots
     if not lst:
         return shots
     async def capped(u):
